@@ -268,8 +268,9 @@ class _RSASignatureContext(object):
                     self._backend._lib.RSA_R_DATA_TOO_LARGE_FOR_KEY_SIZE):
                 reason = ("Salt length too long for key size. Try using "
                           "MAX_LENGTH instead.")
-            elif (errors[0].reason ==
-                    self._backend._lib.RSA_R_DIGEST_TOO_BIG_FOR_RSA_KEY):
+            else:
+                assert (errors[0].reason ==
+                        self._backend._lib.RSA_R_DIGEST_TOO_BIG_FOR_RSA_KEY)
                 reason = "Digest too large for key size. Use a larger key."
             assert reason is not None
             raise ValueError(reason)
@@ -508,17 +509,9 @@ class _RSAVerificationContext(object):
 
 @utils.register_interface(RSAPrivateKeyWithSerialization)
 class _RSAPrivateKey(object):
-    def __init__(self, backend, rsa_cdata):
+    def __init__(self, backend, rsa_cdata, evp_pkey):
         self._backend = backend
         self._rsa_cdata = rsa_cdata
-
-        evp_pkey = self._backend._lib.EVP_PKEY_new()
-        assert evp_pkey != self._backend._ffi.NULL
-        evp_pkey = self._backend._ffi.gc(
-            evp_pkey, self._backend._lib.EVP_PKEY_free
-        )
-        res = self._backend._lib.EVP_PKEY_set1_RSA(evp_pkey, rsa_cdata)
-        assert res == 1
         self._evp_pkey = evp_pkey
 
         self._key_size = self._backend._lib.BN_num_bits(self._rsa_cdata.n)
@@ -543,7 +536,8 @@ class _RSAPrivateKey(object):
         ctx.n = self._backend._lib.BN_dup(self._rsa_cdata.n)
         res = self._backend._lib.RSA_blinding_on(ctx, self._backend._ffi.NULL)
         assert res == 1
-        return _RSAPublicKey(self._backend, ctx)
+        evp_pkey = self._backend._rsa_cdata_to_evp_pkey(ctx)
+        return _RSAPublicKey(self._backend, ctx, evp_pkey)
 
     def private_numbers(self):
         return rsa.RSAPrivateNumbers(
@@ -571,17 +565,9 @@ class _RSAPrivateKey(object):
 
 @utils.register_interface(RSAPublicKeyWithSerialization)
 class _RSAPublicKey(object):
-    def __init__(self, backend, rsa_cdata):
+    def __init__(self, backend, rsa_cdata, evp_pkey):
         self._backend = backend
         self._rsa_cdata = rsa_cdata
-
-        evp_pkey = self._backend._lib.EVP_PKEY_new()
-        assert evp_pkey != self._backend._ffi.NULL
-        evp_pkey = self._backend._ffi.gc(
-            evp_pkey, self._backend._lib.EVP_PKEY_free
-        )
-        res = self._backend._lib.EVP_PKEY_set1_RSA(evp_pkey, rsa_cdata)
-        assert res == 1
         self._evp_pkey = evp_pkey
 
         self._key_size = self._backend._lib.BN_num_bits(self._rsa_cdata.n)

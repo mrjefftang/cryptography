@@ -24,6 +24,7 @@ typedef STACK_OF(DIST_POINT) Cryptography_STACK_OF_DIST_POINT;
 typedef STACK_OF(POLICYQUALINFO) Cryptography_STACK_OF_POLICYQUALINFO;
 typedef STACK_OF(POLICYINFO) Cryptography_STACK_OF_POLICYINFO;
 typedef STACK_OF(ASN1_INTEGER) Cryptography_STACK_OF_ASN1_INTEGER;
+typedef STACK_OF(GENERAL_SUBTREE) Cryptography_STACK_OF_GENERAL_SUBTREE;
 """
 
 TYPES = """
@@ -31,6 +32,8 @@ typedef ... Cryptography_STACK_OF_ACCESS_DESCRIPTION;
 typedef ... Cryptography_STACK_OF_POLICYQUALINFO;
 typedef ... Cryptography_STACK_OF_POLICYINFO;
 typedef ... Cryptography_STACK_OF_ASN1_INTEGER;
+typedef ... Cryptography_STACK_OF_GENERAL_SUBTREE;
+typedef ... EXTENDED_KEY_USAGE;
 
 typedef struct {
     X509 *issuer_cert;
@@ -57,7 +60,8 @@ static const int GEN_IPADD;
 static const int GEN_RID;
 
 typedef struct {
-    ...;
+    ASN1_OBJECT *type_id;
+    ASN1_TYPE *value;
 } OTHERNAME;
 
 typedef struct {
@@ -68,6 +72,12 @@ typedef struct {
     int ca;
     ASN1_INTEGER *pathlen;
 } BASIC_CONSTRAINTS;
+
+typedef struct {
+    Cryptography_STACK_OF_GENERAL_SUBTREE *permittedSubtrees;
+    Cryptography_STACK_OF_GENERAL_SUBTREE *excludedSubtrees;
+} NAME_CONSTRAINTS;
+
 
 typedef struct {
     int type;
@@ -93,6 +103,12 @@ typedef struct {
     } d;
     ...;
 } GENERAL_NAME;
+
+typedef struct {
+    GENERAL_NAME *base;
+    ASN1_INTEGER *minimum;
+    ASN1_INTEGER *maximum;
+} GENERAL_SUBTREE;
 
 typedef struct stack_st_GENERAL_NAME GENERAL_NAMES;
 
@@ -158,7 +174,9 @@ FUNCTIONS = """
 int X509V3_EXT_add_alias(int, int);
 void X509V3_set_ctx(X509V3_CTX *, X509 *, X509 *, X509_REQ *, X509_CRL *, int);
 X509_EXTENSION *X509V3_EXT_nconf(CONF *, X509V3_CTX *, char *, char *);
+GENERAL_NAME *GENERAL_NAME_new(void);
 int GENERAL_NAME_print(BIO *, GENERAL_NAME *);
+GENERAL_NAMES *GENERAL_NAMES_new(void);
 void GENERAL_NAMES_free(GENERAL_NAMES *);
 void *X509V3_EXT_d2i(X509_EXTENSION *);
 """
@@ -171,9 +189,25 @@ BASIC_CONSTRAINTS *BASIC_CONSTRAINTS_new(void);
 void BASIC_CONSTRAINTS_free(BASIC_CONSTRAINTS *);
 /* This is a macro defined by a call to DECLARE_ASN1_FUNCTIONS in the
    x509v3.h header. */
+AUTHORITY_KEYID *AUTHORITY_KEYID_new(void);
 void AUTHORITY_KEYID_free(AUTHORITY_KEYID *);
+int i2d_AUTHORITY_KEYID(AUTHORITY_KEYID *, unsigned char **);
+
+NAME_CONSTRAINTS *NAME_CONSTRAINTS_new(void);
+void NAME_CONSTRAINTS_free(NAME_CONSTRAINTS *);
+
+OTHERNAME *OTHERNAME_new(void);
+void OTHERNAME_free(OTHERNAME *);
 
 void *X509V3_set_ctx_nodb(X509V3_CTX *);
+
+int i2d_GENERAL_NAMES(GENERAL_NAMES *, unsigned char **);
+
+int i2d_EXTENDED_KEY_USAGE(EXTENDED_KEY_USAGE *, unsigned char **);
+
+int i2d_AUTHORITY_INFO_ACCESS(Cryptography_STACK_OF_ACCESS_DESCRIPTION *,
+                              unsigned char **);
+
 int sk_GENERAL_NAME_num(struct stack_st_GENERAL_NAME *);
 int sk_GENERAL_NAME_push(struct stack_st_GENERAL_NAME *, GENERAL_NAME *);
 GENERAL_NAME *sk_GENERAL_NAME_value(struct stack_st_GENERAL_NAME *, int);
@@ -187,6 +221,9 @@ void sk_ACCESS_DESCRIPTION_free(Cryptography_STACK_OF_ACCESS_DESCRIPTION *);
 int sk_ACCESS_DESCRIPTION_push(Cryptography_STACK_OF_ACCESS_DESCRIPTION *,
                                ACCESS_DESCRIPTION *);
 
+ACCESS_DESCRIPTION *ACCESS_DESCRIPTION_new(void);
+void ACCESS_DESCRIPTION_free(ACCESS_DESCRIPTION *);
+
 X509_EXTENSION *X509V3_EXT_conf_nid(Cryptography_LHASH_OF_CONF_VALUE *,
                                     X509V3_CTX *, int, char *);
 
@@ -194,27 +231,66 @@ X509_EXTENSION *X509V3_EXT_conf_nid(Cryptography_LHASH_OF_CONF_VALUE *,
 const X509V3_EXT_METHOD *X509V3_EXT_get(X509_EXTENSION *);
 const X509V3_EXT_METHOD *X509V3_EXT_get_nid(int);
 
+Cryptography_STACK_OF_DIST_POINT *sk_DIST_POINT_new_null(void);
 void sk_DIST_POINT_free(Cryptography_STACK_OF_DIST_POINT *);
 int sk_DIST_POINT_num(Cryptography_STACK_OF_DIST_POINT *);
 DIST_POINT *sk_DIST_POINT_value(Cryptography_STACK_OF_DIST_POINT *, int);
+int sk_DIST_POINT_push(Cryptography_STACK_OF_DIST_POINT *, DIST_POINT *);
 
 void sk_POLICYINFO_free(Cryptography_STACK_OF_POLICYINFO *);
 int sk_POLICYINFO_num(Cryptography_STACK_OF_POLICYINFO *);
 POLICYINFO *sk_POLICYINFO_value(Cryptography_STACK_OF_POLICYINFO *, int);
+int sk_POLICYINFO_push(Cryptography_STACK_OF_POLICYINFO *, POLICYINFO *);
+Cryptography_STACK_OF_POLICYINFO *sk_POLICYINFO_new_null(void);
+
+POLICYINFO *POLICYINFO_new(void);
+void POLICYINFO_free(POLICYINFO *);
+
+POLICYQUALINFO *POLICYQUALINFO_new(void);
+void POLICYQUALINFO_free(POLICYQUALINFO *);
+
+NOTICEREF *NOTICEREF_new(void);
+void NOTICEREF_free(NOTICEREF *);
+
+USERNOTICE *USERNOTICE_new(void);
+void USERNOTICE_free(USERNOTICE *);
+
+int i2d_CERTIFICATEPOLICIES(Cryptography_STACK_OF_POLICYINFO *,
+                            unsigned char **);
 
 void sk_POLICYQUALINFO_free(Cryptography_STACK_OF_POLICYQUALINFO *);
 int sk_POLICYQUALINFO_num(Cryptography_STACK_OF_POLICYQUALINFO *);
 POLICYQUALINFO *sk_POLICYQUALINFO_value(Cryptography_STACK_OF_POLICYQUALINFO *,
                                         int);
+int sk_POLICYQUALINFO_push(Cryptography_STACK_OF_POLICYQUALINFO *,
+                           POLICYQUALINFO *);
+Cryptography_STACK_OF_POLICYQUALINFO *sk_POLICYQUALINFO_new_null(void);
+
+Cryptography_STACK_OF_GENERAL_SUBTREE *sk_GENERAL_SUBTREE_new_null(void);
+void sk_GENERAL_SUBTREE_free(Cryptography_STACK_OF_GENERAL_SUBTREE *);
+int sk_GENERAL_SUBTREE_num(Cryptography_STACK_OF_GENERAL_SUBTREE *);
+GENERAL_SUBTREE *sk_GENERAL_SUBTREE_value(
+    Cryptography_STACK_OF_GENERAL_SUBTREE *, int
+);
+int sk_GENERAL_SUBTREE_push(Cryptography_STACK_OF_GENERAL_SUBTREE *,
+                            GENERAL_SUBTREE *);
 
 void sk_ASN1_INTEGER_free(Cryptography_STACK_OF_ASN1_INTEGER *);
 int sk_ASN1_INTEGER_num(Cryptography_STACK_OF_ASN1_INTEGER *);
 ASN1_INTEGER *sk_ASN1_INTEGER_value(Cryptography_STACK_OF_ASN1_INTEGER *, int);
+int sk_ASN1_INTEGER_push(Cryptography_STACK_OF_ASN1_INTEGER *, ASN1_INTEGER *);
+Cryptography_STACK_OF_ASN1_INTEGER *sk_ASN1_INTEGER_new_null(void);
 
 X509_EXTENSION *X509V3_EXT_i2d(int, int, void *);
+
+DIST_POINT *DIST_POINT_new(void);
+void DIST_POINT_free(DIST_POINT *);
+
+DIST_POINT_NAME *DIST_POINT_NAME_new(void);
+void DIST_POINT_NAME_free(DIST_POINT_NAME *);
+
+int i2d_CRL_DIST_POINTS(Cryptography_STACK_OF_DIST_POINT *, unsigned char **);
 """
 
 CUSTOMIZATIONS = """
 """
-
-CONDITIONAL_NAMES = {}

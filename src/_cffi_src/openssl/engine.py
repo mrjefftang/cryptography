@@ -17,9 +17,16 @@ typedef ... DSA_METHOD;
 typedef ... ECDH_METHOD;
 typedef ... ECDSA_METHOD;
 typedef ... DH_METHOD;
-typedef ... RAND_METHOD;
+typedef struct {
+    void (*seed)(const void *, int);
+    int (*bytes)(unsigned char *, int);
+    void (*cleanup)();
+    void (*add)(const void *, int, double);
+    int (*pseudorand)(unsigned char *, int);
+    int (*status)();
+} RAND_METHOD;
 typedef ... STORE_METHOD;
-typedef ... *ENGINE_GEN_INT_FUNC_PTR;
+typedef int (*ENGINE_GEN_INT_FUNC_PTR)(ENGINE *);
 typedef ... *ENGINE_CTRL_FUNC_PTR;
 typedef ... *ENGINE_LOAD_KEY_PTR;
 typedef ... *ENGINE_CIPHERS_PTR;
@@ -160,9 +167,3 @@ void (*ENGINE_load_cryptodev)(void) = NULL;
 static const long Cryptography_HAS_ENGINE_CRYPTODEV = 1;
 #endif
 """
-
-CONDITIONAL_NAMES = {
-    "Cryptography_HAS_ENGINE_CRYPTODEV": [
-        "ENGINE_load_cryptodev"
-    ]
-}

@@ -4,12 +4,9 @@
 
 from __future__ import absolute_import, division, print_function
 
-import os
 import sys
 
-from _cffi_src.utils import (
-    build_ffi_for_binding
-)
+from _cffi_src.utils import build_ffi_for_binding, extra_link_args
 
 
 def _get_openssl_libraries(platform):
@@ -21,20 +18,8 @@ def _get_openssl_libraries(platform):
         # (http://marc.info/?l=openssl-users&m=135361825921871)
         return ["ssl", "crypto"]
     else:
-        link_type = os.environ.get("PYCA_WINDOWS_LINK_TYPE", "static")
-        return _get_openssl_windows_libraries(link_type)
-
-
-def _get_openssl_windows_libraries(link_type):
-    if link_type == "dynamic":
-        return ["libeay32", "ssleay32", "advapi32"]
-    elif link_type == "static" or link_type == "":
-        return ["libeay32mt", "ssleay32mt", "advapi32",
+        return ["libeay32", "ssleay32", "advapi32",
                 "crypt32", "gdi32", "user32", "ws2_32"]
-    else:
-        raise ValueError(
-            "PYCA_WINDOWS_LINK_TYPE must be 'static' or 'dynamic'"
-        )
 
 
 _OSX_PRE_INCLUDE = """
@@ -80,7 +65,6 @@ ffi = build_ffi_for_binding(
         "nid",
         "objects",
         "opensslv",
-        "osrandom_engine",
         "pem",
         "pkcs7",
         "pkcs12",
@@ -94,5 +78,6 @@ ffi = build_ffi_for_binding(
     ],
     pre_include=_OSX_PRE_INCLUDE,
     post_include=_OSX_POST_INCLUDE,
-    libraries=_get_openssl_libraries(sys.platform)
+    libraries=_get_openssl_libraries(sys.platform),
+    extra_link_args=extra_link_args(sys.platform),
 )

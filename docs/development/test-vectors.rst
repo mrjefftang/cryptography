@@ -102,6 +102,14 @@ X.509
   tree.
 * ``cryptography.io.pem`` - A leaf certificate issued by RapidSSL for the
   cryptography website.
+* ``rapidssl_sha256_ca_g3.pem`` - The intermediate CA that issued the
+  ``cryptography.io.pem`` certificate.
+* ``wildcard_san.pem`` - A leaf certificate issued by a public CA for
+  ``langui.sh`` that contains wildcard entries in the SAN extension.
+* ``san_edipartyname.der`` - A DSA certificate from a `Mozilla bug`_
+  containing a SAN extension with an ``ediPartyName`` general name.
+* ``san_x400address.der`` - A DSA certificate from a `Mozilla bug`_ containing
+  a SAN extension with an ``x400Address`` general name.
 
 Custom X.509 Vectors
 ~~~~~~~~~~~~~~~~~~~~
@@ -151,6 +159,9 @@ Custom X.509 Vectors
 * ``san_idna_names.pem`` - An RSA 2048 bit self-signed certificate containing
   a subject alternative name extension with ``rfc822Name``, ``dNSName``, and
   ``uniformResourceIdentifier`` general names with IDNA (:rfc:`5895`) encoding.
+* ``san_wildcard_idna.pem`` - An RSA 2048 bit self-signed certificate
+  containing a subject alternative name extension with a ``dNSName`` general
+  name with a wildcard IDNA (:rfc:`5895`) domain.
 * ``san_idna2003_dnsname.pem`` - An RSA 2048 bit self-signed certificate
   containing a subject alternative name extension with an IDNA 2003
   (:rfc:`3490`) ``dNSName``.
@@ -192,6 +203,27 @@ Custom X.509 Vectors
 * ``cdp_reason_aa_compromise.pem`` - An RSA 1024 bit certificate containing a
   CRL distribution points extension with the ``AACompromise`` ``reasons`` bit
   set.
+* ``nc_permitted_excluded.pem`` - An RSA 2048 bit self-signed certificate
+  containing a name constraints extension with both permitted and excluded
+  elements. Contains ``IPv4`` and ``IPv6`` addresses with network mask as well
+  as ``dNSName`` with a leading period.
+* ``nc_permitted_excluded_2.pem`` - An RSA 2048 bit self-signed certificate
+  containing a name constraints extension with both permitted and excluded
+  elements. Unlike ``nc_permitted_excluded.pem``, the general names do not
+  contain any name constraints specific values.
+* ``nc_permitted.pem`` - An RSA 2048 bit self-signed certificate containing a
+  name constraints extension with permitted elements.
+* ``nc_permitted_2.pem`` - An RSA 2048 bit self-signed certificate containing a
+  name constraints extension with permitted elements that do not contain any
+  name constraints specific values.
+* ``nc_excluded.pem`` - An RSA 2048 bit self-signed certificate containing a
+  name constraints extension with excluded elements.
+* ``nc_invalid_ip_netmask.pem`` - An RSA 2048 bit self-signed certificate
+  containing a name constraints extension with a permitted element that has an
+  ``IPv6`` IP and an invalid network mask.
+* ``nc_single_ip_netmask.pem`` - An RSA 2048 bit self-signed certificate
+  containing a name constraints extension with a permitted element that has two
+  IPs with ``/32`` and ``/128`` network masks.
 * ``cp_user_notice_with_notice_reference.pem`` - An RSA 2048 bit self-signed
   certificate containing a certificate policies extension with a
   notice reference in the user notice.
@@ -203,6 +235,19 @@ Custom X.509 Vectors
 * ``cp_user_notice_no_explicit_text.pem`` - An RSA 2048 bit self-signed
   certificate containing a certificate policies extension with a user notice
   with no explicit text.
+* ``cp_invalid.pem`` - An RSA 2048 bit self-signed certificate containing a
+  certificate policies extension with invalid data.
+* ``ian_uri.pem`` - An RSA 2048 bit certificate containing an issuer
+  alternative name extension with a ``URI`` general name.
+* ``ocsp_nocheck.pem`` - An RSA 2048 bit self-signed certificate containing
+  an ``OCSPNoCheck`` extension.
+* ``pc_inhibit_require.pem`` - An RSA 2048 bit self-signed certificate
+  containing a policy constraints extension with both inhibit policy mapping
+  and require explicit policy elements.
+* ``pc_inhibit.pem`` - An RSA 2048 bit self-signed certificate containing a
+  policy constraints extension with an inhibit policy mapping element.
+* ``pc_require.pem`` - An RSA 2048 bit self-signed certificate containing a
+  policy constraints extension with a require explicit policy element.
 
 Custom X.509 Request Vectors
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -375,3 +420,4 @@ header format (substituting the correct information):
 .. _`DigiCert Global Root G3`: http://cacerts.digicert.com/DigiCertGlobalRootG3.crt
 .. _`root data`: https://hg.mozilla.org/projects/nss/file/25b2922cc564/security/nss/lib/ckfw/builtins/certdata.txt#l2053
 .. _`asymmetric/public/PKCS1/dsa.pub.pem`: https://github.com/ruby/ruby/blob/4ccb387f3bc436a08fc6d72c4931994f5de95110/test/openssl/test_pkey_dsa.rb#L53
+.. _`Mozilla bug`: https://bugzilla.mozilla.org/show_bug.cgi?id=233586

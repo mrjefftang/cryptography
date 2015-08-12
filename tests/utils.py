@@ -53,10 +53,11 @@ def skip_if_empty(backend_list, required_interfaces):
 def check_backend_support(item):
     supported = item.keywords.get("supported")
     if supported and "backend" in item.funcargs:
-        if not supported.kwargs["only_if"](item.funcargs["backend"]):
-            pytest.skip("{0} ({1})".format(
-                supported.kwargs["skip_message"], item.funcargs["backend"]
-            ))
+        for mark in supported:
+            if not mark.kwargs["only_if"](item.funcargs["backend"]):
+                pytest.skip("{0} ({1})".format(
+                    mark.kwargs["skip_message"], item.funcargs["backend"]
+                ))
     elif supported:
         raise ValueError("This mark is only available on methods that take a "
                          "backend")
@@ -397,10 +398,7 @@ def load_fips_dsa_key_pair_vectors(vector_data):
         elif line.startswith("[mod = L=3072"):
             continue
 
-        if not reading_key_data:
-            continue
-
-        elif reading_key_data:
+        if reading_key_data:
             if line.startswith("P"):
                 vectors.append({'p': int(line.split("=")[1], 16)})
             elif line.startswith("Q"):
@@ -541,8 +539,8 @@ def load_fips_ecdsa_key_pair_vectors(vector_data):
             elif line.startswith("Qy = "):
                 key_data["y"] = int(line.split("=")[1], 16)
 
-    if key_data is not None:
-        vectors.append(key_data)
+    assert key_data is not None
+    vectors.append(key_data)
 
     return vectors
 
@@ -560,9 +558,6 @@ def load_fips_ecdsa_signing_vectors(vector_data):
     data = None
     for line in vector_data:
         line = line.strip()
-
-        if not line or line.startswith("#"):
-            continue
 
         curve_match = curve_rx.match(line)
         if curve_match:
@@ -595,8 +590,8 @@ def load_fips_ecdsa_signing_vectors(vector_data):
             elif line.startswith("Result = "):
                 data["fail"] = line.split("=")[1].strip()[0] == "F"
 
-    if data is not None:
-        vectors.append(data)
+    assert data is not None
+    vectors.append(data)
     return vectors
 
 

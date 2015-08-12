@@ -85,21 +85,6 @@ def test_modular_inverse():
     )
 
 
-def _skip_if_no_serialization(key, backend):
-    if not isinstance(
-        key,
-        (rsa.RSAPrivateKeyWithSerialization, rsa.RSAPublicKeyWithSerialization)
-    ):
-        pytest.skip(
-            "{0} does not support RSA key serialization".format(backend)
-        )
-
-
-def test_skip_if_no_serialization():
-    with pytest.raises(pytest.skip.Exception):
-        _skip_if_no_serialization("notakeywithserialization", "backend")
-
-
 @pytest.mark.requires_backend_interface(interface=RSABackend)
 class TestRSA(object):
     @pytest.mark.parametrize(
@@ -113,10 +98,9 @@ class TestRSA(object):
         skey = rsa.generate_private_key(public_exponent, key_size, backend)
         assert skey.key_size == key_size
 
-        if isinstance(skey, rsa.RSAPrivateKeyWithSerialization):
-            _check_rsa_private_numbers(skey.private_numbers())
-            pkey = skey.public_key()
-            assert isinstance(pkey.public_numbers(), rsa.RSAPublicNumbers)
+        _check_rsa_private_numbers(skey.private_numbers())
+        pkey = skey.public_key()
+        assert isinstance(pkey.public_numbers(), rsa.RSAPublicNumbers)
 
     def test_generate_bad_public_exponent(self, backend):
         with pytest.raises(ValueError):
@@ -1721,6 +1705,22 @@ class TestRSANumbersEquality(object):
         )
         assert num != object()
 
+    def test_public_numbers_hash(self):
+        pub1 = RSAPublicNumbers(3, 17)
+        pub2 = RSAPublicNumbers(3, 17)
+        pub3 = RSAPublicNumbers(7, 21)
+
+        assert hash(pub1) == hash(pub2)
+        assert hash(pub1) != hash(pub3)
+
+    def test_private_numbers_hash(self):
+        priv1 = RSAPrivateNumbers(1, 2, 3, 4, 5, 6, RSAPublicNumbers(1, 2))
+        priv2 = RSAPrivateNumbers(1, 2, 3, 4, 5, 6, RSAPublicNumbers(1, 2))
+        priv3 = RSAPrivateNumbers(1, 2, 3, 4, 5, 6, RSAPublicNumbers(1, 3))
+
+        assert hash(priv1) == hash(priv2)
+        assert hash(priv1) != hash(priv3)
+
 
 class TestRSAPrimeFactorRecovery(object):
     @pytest.mark.parametrize(
@@ -1769,7 +1769,6 @@ class TestRSAPrivateKeySerialization(object):
     )
     def test_private_bytes_encrypted_pem(self, backend, fmt, password):
         key = RSA_KEY_2048.private_key(backend)
-        _skip_if_no_serialization(key, backend)
         serialized = key.private_bytes(
             serialization.Encoding.PEM,
             fmt,
@@ -1793,7 +1792,6 @@ class TestRSAPrivateKeySerialization(object):
     )
     def test_private_bytes_encrypted_der(self, backend, fmt, password):
         key = RSA_KEY_2048.private_key(backend)
-        _skip_if_no_serialization(key, backend)
         serialized = key.private_bytes(
             serialization.Encoding.DER,
             fmt,
@@ -1834,7 +1832,6 @@ class TestRSAPrivateKeySerialization(object):
     def test_private_bytes_unencrypted(self, backend, encoding, fmt,
                                        loader_func):
         key = RSA_KEY_2048.private_key(backend)
-        _skip_if_no_serialization(key, backend)
         serialized = key.private_bytes(
             encoding, fmt, serialization.NoEncryption()
         )
@@ -1878,7 +1875,6 @@ class TestRSAPrivateKeySerialization(object):
 
     def test_private_bytes_traditional_der_encrypted_invalid(self, backend):
         key = RSA_KEY_2048.private_key(backend)
-        _skip_if_no_serialization(key, backend)
         with pytest.raises(ValueError):
             key.private_bytes(
                 serialization.Encoding.DER,
@@ -1888,7 +1884,6 @@ class TestRSAPrivateKeySerialization(object):
 
     def test_private_bytes_invalid_encoding(self, backend):
         key = RSA_KEY_2048.private_key(backend)
-        _skip_if_no_serialization(key, backend)
         with pytest.raises(TypeError):
             key.private_bytes(
                 "notencoding",
@@ -1898,7 +1893,6 @@ class TestRSAPrivateKeySerialization(object):
 
     def test_private_bytes_invalid_format(self, backend):
         key = RSA_KEY_2048.private_key(backend)
-        _skip_if_no_serialization(key, backend)
         with pytest.raises(TypeError):
             key.private_bytes(
                 serialization.Encoding.PEM,
@@ -1908,7 +1902,6 @@ class TestRSAPrivateKeySerialization(object):
 
     def test_private_bytes_invalid_encryption_algorithm(self, backend):
         key = RSA_KEY_2048.private_key(backend)
-        _skip_if_no_serialization(key, backend)
         with pytest.raises(TypeError):
             key.private_bytes(
                 serialization.Encoding.PEM,
@@ -1918,7 +1911,6 @@ class TestRSAPrivateKeySerialization(object):
 
     def test_private_bytes_unsupported_encryption_type(self, backend):
         key = RSA_KEY_2048.private_key(backend)
-        _skip_if_no_serialization(key, backend)
         with pytest.raises(ValueError):
             key.private_bytes(
                 serialization.Encoding.PEM,
@@ -1966,18 +1958,15 @@ class TestRSAPEMPublicKeySerialization(object):
             key_path, lambda pemfile: pemfile.read(), mode="rb"
         )
         key = loader_func(key_bytes, backend)
-        _skip_if_no_serialization(key, backend)
         serialized = key.public_bytes(encoding, format)
         assert serialized == key_bytes
 
     def test_public_bytes_invalid_encoding(self, backend):
         key = RSA_KEY_2048.private_key(backend).public_key()
-        _skip_if_no_serialization(key, backend)
         with pytest.raises(TypeError):
             key.public_bytes("notencoding", serialization.PublicFormat.PKCS1)
 
     def test_public_bytes_invalid_format(self, backend):
         key = RSA_KEY_2048.private_key(backend).public_key()
-        _skip_if_no_serialization(key, backend)
         with pytest.raises(TypeError):
             key.public_bytes(serialization.Encoding.PEM, "invalidformat")

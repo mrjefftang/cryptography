@@ -230,6 +230,7 @@ static const int RSA_R_DIGEST_TOO_BIG_FOR_RSA_KEY;
 static const int RSA_R_BLOCK_TYPE_IS_NOT_01;
 static const int RSA_R_BLOCK_TYPE_IS_NOT_02;
 static const int RSA_R_PKCS_DECODING_ERROR;
+static const int RSA_F_RSA_SIGN;
 """
 
 FUNCTIONS = """
@@ -251,6 +252,7 @@ unsigned long ERR_peek_error_line(const char **, int *);
 unsigned long ERR_peek_last_error_line(const char **, int *);
 unsigned long ERR_get_error_line_data(const char **, int *,
                                       const char **, int *);
+void ERR_clear_error(void);
 unsigned long ERR_peek_error_line_data(const char **,
                                        int *, const char **, int *);
 unsigned long ERR_peek_last_error_line_data(const char **,
@@ -333,29 +335,3 @@ static const long Cryptography_HAS_RSA_R_PKCS_DECODING_ERROR = 0;
 static const long RSA_R_PKCS_DECODING_ERROR = 0;
 #endif
 """
-
-CONDITIONAL_NAMES = {
-    "Cryptography_HAS_REMOVE_THREAD_STATE": [
-        "ERR_remove_thread_state"
-    ],
-    "Cryptography_HAS_098H_ERROR_CODES": [
-        "ASN1_F_B64_READ_ASN1",
-        "ASN1_F_B64_WRITE_ASN1",
-        "ASN1_F_SMIME_READ_ASN1",
-        "ASN1_F_SMIME_TEXT",
-        "ASN1_R_NO_CONTENT_TYPE",
-        "ASN1_R_NO_MULTIPART_BODY_FAILURE",
-        "ASN1_R_NO_MULTIPART_BOUNDARY",
-    ],
-    "Cryptography_HAS_098C_CAMELLIA_CODES": [
-        "EVP_F_CAMELLIA_INIT_KEY",
-        "EVP_R_CAMELLIA_KEY_SETUP_FAILED"
-    ],
-    "Cryptography_HAS_EC_CODES": [
-        "EC_R_UNKNOWN_GROUP",
-        "EC_F_EC_GROUP_NEW_BY_CURVE_NAME"
-    ],
-    "Cryptography_HAS_RSA_R_PKCS_DECODING_ERROR": [
-        "RSA_R_PKCS_DECODING_ERROR"
-    ]
-}

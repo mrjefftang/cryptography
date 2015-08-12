@@ -182,19 +182,21 @@ X509_EXTENSION *X509_REVOKED_get_ext(X509_REVOKED *, int);
 int X509_REVOKED_add_ext(X509_REVOKED *, X509_EXTENSION*, int);
 int X509_REVOKED_add1_ext_i2d(X509_REVOKED *, int, void *, int, unsigned long);
 
-X509_CRL *d2i_X509_CRL_bio(BIO *, X509_CRL **);
 X509_CRL *X509_CRL_new(void);
-void X509_CRL_free(X509_CRL *);
-int X509_CRL_add0_revoked(X509_CRL *, X509_REVOKED *);
-int i2d_X509_CRL_bio(BIO *, X509_CRL *);
-int X509_CRL_print(BIO *, X509_CRL *);
-int X509_CRL_set_issuer_name(X509_CRL *, X509_NAME *);
-int X509_CRL_sign(X509_CRL *, EVP_PKEY *, const EVP_MD *);
-int X509_CRL_verify(X509_CRL *, EVP_PKEY *);
-int X509_CRL_get_ext_count(X509_CRL *);
+X509_CRL *d2i_X509_CRL_bio(BIO *, X509_CRL **);
 X509_EXTENSION *X509_CRL_get_ext(X509_CRL *, int);
+int X509_CRL_add0_revoked(X509_CRL *, X509_REVOKED *);
 int X509_CRL_add_ext(X509_CRL *, X509_EXTENSION *, int);
 int X509_CRL_cmp(const X509_CRL *, const X509_CRL *);
+int X509_CRL_get_ext_count(X509_CRL *);
+int X509_CRL_print(BIO *, X509_CRL *);
+int X509_CRL_set_issuer_name(X509_CRL *, X509_NAME *);
+int X509_CRL_set_version(X509_CRL *, long);
+int X509_CRL_sign(X509_CRL *, EVP_PKEY *, const EVP_MD *);
+int X509_CRL_sort(X509_CRL *);
+int X509_CRL_verify(X509_CRL *, EVP_PKEY *);
+int i2d_X509_CRL_bio(BIO *, X509_CRL *);
+void X509_CRL_free(X509_CRL *);
 
 int NETSCAPE_SPKI_verify(NETSCAPE_SPKI *, EVP_PKEY *);
 int NETSCAPE_SPKI_sign(NETSCAPE_SPKI *, EVP_PKEY *, const EVP_MD *);
@@ -323,6 +325,8 @@ int i2o_ECPublicKey(EC_KEY *, unsigned char **);
 int sk_ASN1_OBJECT_num(Cryptography_STACK_OF_ASN1_OBJECT *);
 ASN1_OBJECT *sk_ASN1_OBJECT_value(Cryptography_STACK_OF_ASN1_OBJECT *, int);
 void sk_ASN1_OBJECT_free(Cryptography_STACK_OF_ASN1_OBJECT *);
+Cryptography_STACK_OF_ASN1_OBJECT *sk_ASN1_OBJECT_new_null(void);
+int sk_ASN1_OBJECT_push(Cryptography_STACK_OF_ASN1_OBJECT *, ASN1_OBJECT *);
 """
 
 CUSTOMIZATIONS = """
@@ -344,18 +348,3 @@ EC_KEY *(*o2i_ECPublicKey)(EC_KEY **, const unsigned char **, long) = NULL;
 int (*i2o_ECPublicKey)(EC_KEY *, unsigned char **) = NULL;
 #endif
 """
-
-CONDITIONAL_NAMES = {
-    "Cryptography_HAS_EC": [
-        "i2d_EC_PUBKEY",
-        "d2i_EC_PUBKEY",
-        "d2i_EC_PUBKEY_bio",
-        "i2d_EC_PUBKEY_bio",
-        "d2i_ECPrivateKey",
-        "d2i_ECPrivateKey_bio",
-        "i2d_ECPrivateKey",
-        "i2d_ECPrivateKey_bio",
-        "i2o_ECPublicKey",
-        "o2i_ECPublicKey",
-    ]
-}

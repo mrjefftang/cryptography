@@ -89,8 +89,8 @@ class TestOpenSSL(object):
 
     def test_add_engine_more_than_once(self):
         b = Binding()
-        res = b.lib.Cryptography_add_osrandom_engine()
-        assert res == 2
+        with pytest.raises(RuntimeError):
+            b._register_osrandom_engine()
 
     def test_ssl_ctx_options(self):
         # Test that we're properly handling 32-bit unsigned on all platforms.
@@ -131,3 +131,21 @@ class TestOpenSSL(object):
         expected_options = current_options | b.lib.SSL_OP_ALL
         assert resp == expected_options
         assert b.lib.SSL_get_mode(ssl) == expected_options
+
+    def test_conditional_removal(self):
+        b = Binding()
+        if b.lib.OPENSSL_VERSION_NUMBER >= 0x10000000:
+            assert b.lib.X509_V_ERR_DIFFERENT_CRL_SCOPE
+            assert b.lib.X509_V_ERR_CRL_PATH_VALIDATION_ERROR
+        else:
+            with pytest.raises(AttributeError):
+                b.lib.X509_V_ERR_DIFFERENT_CRL_SCOPE
+
+            with pytest.raises(AttributeError):
+                b.lib.X509_V_ERR_CRL_PATH_VALIDATION_ERROR
+
+        if b.lib.OPENSSL_VERSION_NUMBER >= 0x10001000:
+            assert b.lib.CMAC_Init
+        else:
+            with pytest.raises(AttributeError):
+                b.lib.CMAC_Init

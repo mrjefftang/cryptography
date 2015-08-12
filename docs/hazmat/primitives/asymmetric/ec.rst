@@ -49,8 +49,8 @@ Elliptic Curve Signature Algorithms
         >>> signature = signer.finalize()
 
     The ``signature`` is a ``bytes`` object, whose contents is DER encoded as
-    described in :rfc:`6979`. This can be decoded using
-    :func:`~cryptography.hazmat.primitives.asymmetric.utils.decode_rfc6979_signature`.
+    described in :rfc:`3279`. This can be decoded using
+    :func:`~cryptography.hazmat.primitives.asymmetric.utils.decode_dss_signature`.
 
 
 
@@ -306,7 +306,7 @@ Key Interfaces
 
         Sign data which can be verified later by others using the public key.
         The signature is formatted as DER-encoded bytes, as specified in
-        :rfc:`6979`.
+        :rfc:`3279`.
 
         :param signature_algorithm: An instance of a
             :class:`EllipticCurveSignatureAlgorithm` provider.
@@ -319,19 +319,6 @@ Key Interfaces
         :return: :class:`EllipticCurvePublicKey`
 
         The EllipticCurvePublicKey object for this private key.
-
-
-.. class:: EllipticCurvePrivateKeyWithNumbers
-
-    .. versionadded:: 0.6
-
-    Extends :class:`EllipticCurvePrivateKey`.
-
-    .. method:: private_numbers()
-
-        Create a :class:`EllipticCurvePrivateNumbers` object.
-
-        :returns: An :class:`EllipticCurvePrivateNumbers` instance.
 
 
 .. class:: EllipticCurvePrivateKeyWithSerialization
@@ -385,7 +372,7 @@ Key Interfaces
         key.
 
         :param bytes signature: The signature to verify. DER encoded as
-            specified in :rfc:`6979`.
+            specified in :rfc:`3279`.
 
         :param signature_algorithm: An instance of a
             :class:`EllipticCurveSignatureAlgorithm` provider.
@@ -398,26 +385,6 @@ Key Interfaces
         :type: :class:`EllipticCurve`
 
         The elliptic curve for this key.
-
-
-.. class:: EllipticCurvePublicKeyWithNumbers
-
-    .. versionadded:: 0.6
-
-    Extends :class:`EllipticCurvePublicKey`.
-
-    .. method:: public_numbers()
-
-        Create a :class:`EllipticCurvePublicNumbers` object.
-
-        :returns: An :class:`EllipticCurvePublicNumbers` instance.
-
-
-.. class:: EllipticCurvePublicKeyWithSerialization
-
-    .. versionadded:: 0.6
-
-    Extends :class:`EllipticCurvePublicKey`.
 
     .. method:: public_numbers()
 
@@ -441,6 +408,13 @@ Key Interfaces
             :class:`~cryptography.hazmat.primitives.serialization.PublicFormat` enum.
 
         :return bytes: Serialized key.
+
+
+.. class:: EllipticCurvePublicKeyWithSerialization
+
+    .. versionadded:: 0.6
+
+    Alias for :class:`EllipticCurvePublicKey`.
 
 
 .. _`FIPS 186-3`: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf

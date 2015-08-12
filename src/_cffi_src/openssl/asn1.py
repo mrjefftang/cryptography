@@ -42,7 +42,8 @@ typedef struct asn1_string_st ASN1_OCTET_STRING;
 typedef struct asn1_string_st ASN1_IA5STRING;
 typedef ... ASN1_BIT_STRING;
 typedef ... ASN1_OBJECT;
-typedef ... ASN1_STRING;
+typedef struct asn1_string_st ASN1_STRING;
+typedef struct asn1_string_st ASN1_UTF8STRING;
 typedef ... ASN1_TYPE;
 typedef ... ASN1_GENERALIZEDTIME;
 typedef ... ASN1_ENUMERATED;
@@ -87,6 +88,9 @@ ASN1_OCTET_STRING *ASN1_OCTET_STRING_new(void);
 void ASN1_OCTET_STRING_free(ASN1_OCTET_STRING *);
 int ASN1_OCTET_STRING_set(ASN1_OCTET_STRING *, const unsigned char *, int);
 
+/* ASN1 IA5STRING */
+ASN1_IA5STRING *ASN1_IA5STRING_new(void);
+
 /*  ASN1 INTEGER */
 ASN1_INTEGER *ASN1_INTEGER_new(void);
 void ASN1_INTEGER_free(ASN1_INTEGER *);
@@ -122,7 +126,14 @@ int ASN1_BIT_STRING_set_bit(ASN1_BIT_STRING *, int, int);
 """
 
 MACROS = """
+ASN1_UTF8STRING *ASN1_UTF8STRING_new(void);
+void ASN1_UTF8STRING_free(ASN1_UTF8STRING *);
+
+ASN1_BIT_STRING *ASN1_BIT_STRING_new(void);
 void ASN1_BIT_STRING_free(ASN1_BIT_STRING *);
+int i2d_ASN1_BIT_STRING(ASN1_BIT_STRING *, unsigned char **);
+int i2d_ASN1_OCTET_STRING(ASN1_OCTET_STRING *, unsigned char **);
+int i2d_ASN1_INTEGER(ASN1_INTEGER *, unsigned char **);
 /* This is not a macro, but is const on some versions of OpenSSL */
 int ASN1_BIT_STRING_get_bit(ASN1_BIT_STRING *, int);
 ASN1_TIME *M_ASN1_TIME_dup(void *);
@@ -152,9 +163,10 @@ int ASN1_UTCTIME_check(ASN1_UTCTIME *);
 
 /* Not a macro, const on openssl 1.0 */
 int ASN1_STRING_set_default_mask_asc(char *);
+
+int i2d_ASN1_TYPE(ASN1_TYPE *, unsigned char **);
+ASN1_TYPE *d2i_ASN1_TYPE(ASN1_TYPE **, const unsigned char **, long);
 """
 
 CUSTOMIZATIONS = """
 """
-
-CONDITIONAL_NAMES = {}

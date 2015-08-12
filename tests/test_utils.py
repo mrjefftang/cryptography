@@ -85,7 +85,7 @@ def test_check_backend_support_skip():
     supported = pretend.stub(
         kwargs={"only_if": lambda backend: False, "skip_message": "Nope"}
     )
-    item = pretend.stub(keywords={"supported": supported},
+    item = pretend.stub(keywords={"supported": [supported]},
                         funcargs={"backend": True})
     with pytest.raises(pytest.skip.Exception) as exc_info:
         check_backend_support(item)
@@ -96,7 +96,7 @@ def test_check_backend_support_no_skip():
     supported = pretend.stub(
         kwargs={"only_if": lambda backend: True, "skip_message": "Nope"}
     )
-    item = pretend.stub(keywords={"supported": supported},
+    item = pretend.stub(keywords={"supported": [supported]},
                         funcargs={"backend": True})
     assert check_backend_support(item) is None
 
@@ -3045,8 +3045,13 @@ d518475576730ed528779366568e46b7dd4ed787cb72d0733c93
     assert expected == load_kasvs_dh_vectors(vector_data)
 
 
+def test_load_kasvs_ecdh_vectors_empty_vector_data():
+    assert [] == load_kasvs_ecdh_vectors([])
+
+
 def test_load_kasvs_ecdh_vectors():
     vector_data = textwrap.dedent("""
+    #  CAVS 11.0
     #  Parameter set(s) supported: EA EB EC ED EE
     #  CAVSid: CAVSid (in hex: 434156536964)
     #  IUTid: In hex: a1b2c3d4e5

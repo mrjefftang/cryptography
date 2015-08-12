@@ -21,15 +21,31 @@ from cryptography.hazmat.backends.openssl.backend import (
 )
 from cryptography.hazmat.backends.openssl.ec import _sn_to_elliptic_curve
 from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import dsa, padding
+from cryptography.hazmat.primitives.asymmetric import dsa, ec, padding
 from cryptography.hazmat.primitives.ciphers import (
     BlockCipherAlgorithm, Cipher, CipherAlgorithm
 )
 from cryptography.hazmat.primitives.ciphers.algorithms import AES
 from cryptography.hazmat.primitives.ciphers.modes import CBC, CTR, Mode
 
+from ..primitives.fixtures_dsa import DSA_KEY_2048
 from ..primitives.fixtures_rsa import RSA_KEY_2048, RSA_KEY_512
+from ..primitives.test_ec import _skip_curve_unsupported
 from ...utils import load_vectors_from_file, raises_unsupported_algorithm
+
+
+def skip_if_libre_ssl(openssl_version):
+    if u'LibreSSL' in openssl_version:
+        pytest.skip("LibreSSL hard-codes RAND_bytes to use arc4random.")
+
+
+class TestLibreSkip(object):
+    def test_skip_no(self):
+        assert skip_if_libre_ssl(u"OpenSSL 0.9.8zf 19 Mar 2015") is None
+
+    def test_skip_yes(self):
+        with pytest.raises(pytest.skip.Exception):
+            skip_if_libre_ssl(u"LibreSSL 2.1.6")
 
 
 @utils.register_interface(Mode)
@@ -214,6 +230,19 @@ class TestOpenSSL(object):
         bn = backend._int_to_bn(0)
         assert backend._bn_to_int(bn) == 0
 
+    def test_actual_osrandom_bytes(self, monkeypatch):
+        skip_if_libre_ssl(backend.openssl_version_text())
+        sample_data = (b"\x01\x02\x03\x04" * 4)
+        length = len(sample_data)
+
+        def notrandom(size):
+            assert size == length
+            return sample_data
+        monkeypatch.setattr(os, "urandom", notrandom)
+        buf = backend._ffi.new("char[]", length)
+        backend._lib.RAND_bytes(buf, length)
+        assert backend._ffi.buffer(buf)[0:length] == sample_data
+
 
 class TestOpenSSLRandomEngine(object):
     def teardown_method(self, method):
@@ -222,7 +251,7 @@ class TestOpenSSLRandomEngine(object):
         backend.activate_osrandom_engine()
         current_default = backend._lib.ENGINE_get_default_RAND()
         name = backend._lib.ENGINE_get_name(current_default)
-        assert name == backend._lib.Cryptography_osrandom_engine_name
+        assert name == backend._binding._osrandom_engine_name
 
     def test_osrandom_engine_is_default(self, tmpdir):
         engine_printer = textwrap.dedent(
@@ -256,7 +285,7 @@ class TestOpenSSLRandomEngine(object):
             )
 
         osrandom_engine_name = backend._ffi.string(
-            backend._lib.Cryptography_osrandom_engine_name
+            backend._binding._osrandom_engine_name
         )
 
         assert engine_name.read().encode('ascii') == osrandom_engine_name
@@ -275,7 +304,7 @@ class TestOpenSSLRandomEngine(object):
         backend.activate_osrandom_engine()
         e = backend._lib.ENGINE_get_default_RAND()
         name = backend._lib.ENGINE_get_name(e)
-        assert name == backend._lib.Cryptography_osrandom_engine_name
+        assert name == backend._binding._osrandom_engine_name
         res = backend._lib.ENGINE_free(e)
         assert res == 1
 
@@ -283,7 +312,7 @@ class TestOpenSSLRandomEngine(object):
         e = backend._lib.ENGINE_get_default_RAND()
         assert e != backend._ffi.NULL
         name = backend._lib.ENGINE_get_name(e)
-        assert name == backend._lib.Cryptography_osrandom_engine_name
+        assert name == backend._binding._osrandom_engine_name
         res = backend._lib.ENGINE_free(e)
         assert res == 1
         backend.activate_builtin_random()
@@ -301,13 +330,13 @@ class TestOpenSSLRandomEngine(object):
     def test_activate_osrandom_already_default(self):
         e = backend._lib.ENGINE_get_default_RAND()
         name = backend._lib.ENGINE_get_name(e)
-        assert name == backend._lib.Cryptography_osrandom_engine_name
+        assert name == backend._binding._osrandom_engine_name
         res = backend._lib.ENGINE_free(e)
         assert res == 1
         backend.activate_osrandom_engine()
         e = backend._lib.ENGINE_get_default_RAND()
         name = backend._lib.ENGINE_get_name(e)
-        assert name == backend._lib.Cryptography_osrandom_engine_name
+        assert name == backend._binding._osrandom_engine_name
         res = backend._lib.ENGINE_free(e)
         assert res == 1
 
@@ -451,6 +480,37 @@ class TestOpenSSLCMAC(object):
 
         with raises_unsupported_algorithm(_Reasons.UNSUPPORTED_CIPHER):
             backend.create_cmac_ctx(FakeAlgorithm())
+
+
+class TestOpenSSLCreateX509CSR(object):
+    @pytest.mark.skipif(
+        backend._lib.OPENSSL_VERSION_NUMBER >= 0x10001000,
+        reason="Requires an older OpenSSL. Must be < 1.0.1"
+    )
+    def test_unsupported_dsa_keys(self):
+        private_key = DSA_KEY_2048.private_key(backend)
+
+        with pytest.raises(NotImplementedError):
+            backend.create_x509_csr(object(), private_key, hashes.SHA1())
+
+    @pytest.mark.skipif(
+        backend._lib.OPENSSL_VERSION_NUMBER >= 0x10001000,
+        reason="Requires an older OpenSSL. Must be < 1.0.1"
+    )
+    def test_unsupported_ec_keys(self):
+        _skip_curve_unsupported(backend, ec.SECP256R1())
+        private_key = ec.generate_private_key(ec.SECP256R1(), backend)
+
+        with pytest.raises(NotImplementedError):
+            backend.create_x509_csr(object(), private_key, hashes.SHA1())
+
+
+class TestOpenSSLSignX509Certificate(object):
+    def test_requires_certificate_builder(self):
+        private_key = RSA_KEY_2048.private_key(backend)
+
+        with pytest.raises(TypeError):
+            backend.create_x509_certificate(object(), private_key, DummyHash())
 
 
 class TestOpenSSLSerialisationWithOpenSSL(object):

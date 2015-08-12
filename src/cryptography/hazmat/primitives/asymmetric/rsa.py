@@ -76,9 +76,6 @@ class RSAPublicKey(object):
         The bit length of the public modulus.
         """
 
-
-@six.add_metaclass(abc.ABCMeta)
-class RSAPublicKeyWithSerialization(RSAPublicKey):
     @abc.abstractmethod
     def public_numbers(self):
         """
@@ -90,6 +87,9 @@ class RSAPublicKeyWithSerialization(RSAPublicKey):
         """
         Returns the key serialized as bytes.
         """
+
+
+RSAPublicKeyWithSerialization = RSAPublicKey
 
 
 def generate_private_key(public_exponent, key_size, backend):
@@ -307,6 +307,17 @@ class RSAPrivateNumbers(object):
     def __ne__(self, other):
         return not self == other
 
+    def __hash__(self):
+        return hash((
+            self.p,
+            self.q,
+            self.d,
+            self.dmp1,
+            self.dmq1,
+            self.iqmp,
+            self.public_numbers,
+        ))
+
 
 class RSAPublicNumbers(object):
     def __init__(self, e, n):
@@ -336,3 +347,6 @@ class RSAPublicNumbers(object):
 
     def __ne__(self, other):
         return not self == other
+
+    def __hash__(self):
+        return hash((self.e, self.n))

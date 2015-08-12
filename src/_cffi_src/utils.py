@@ -22,9 +22,6 @@ def build_ffi_for_binding(module_name, module_prefix, modules, pre_include="",
     * ``CUSTOMIZATIONS``: A string containing arbitrary top-level C code, this
         can be used to do things like test for a define and provide an
         alternate implementation based on that.
-    * ``CONDITIONAL_NAMES``: A dict mapping strings of condition names from the
-        library to a list of names which will not be present without the
-        condition.
     """
     types = []
     includes = []
@@ -80,3 +77,12 @@ def build_ffi(module_name, cdef_source, verify_source, libraries=[],
         extra_link_args=extra_link_args,
     )
     return ffi
+
+
+def extra_link_args(platform):
+    if platform != "win32":
+        return []
+    else:
+        # Enable NX and ASLR for Windows builds. These are enabled by default
+        # on Python 3.3+ but not on 2.x.
+        return ["/NXCOMPAT", "/DYNAMICBASE"]

@@ -225,6 +225,9 @@ class _EllipticCurvePublicKey(object):
     curve = utils.read_only_property("_curve")
 
     def verifier(self, signature, signature_algorithm):
+        if not isinstance(signature, bytes):
+            raise TypeError("signature must be bytes.")
+
         if isinstance(signature_algorithm, ec.ECDSA):
             return _ECDSAVerificationContext(
                 self._backend, self, signature, signature_algorithm.algorithm

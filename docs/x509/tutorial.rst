@@ -37,7 +37,7 @@ are the most common types of keys on the web right now):
     ...     backend=default_backend()
     ... )
     >>> # Write our key to disk for safe keeping
-    >>> with open("path/to/store/key.pem") as f:
+    >>> with open("path/to/store/key.pem", "wb") as f:
     ...     f.write(key.private_bytes(
     ...         encoding=serialization.Encoding.PEM,
     ...         format=serialization.PrivateFormat.TraditionalOpenSSL,
@@ -58,6 +58,7 @@ a few details:
 
     >>> from cryptography import x509
     >>> from cryptography.x509.oid import NameOID
+    >>> from cryptography.hazmat.primitives import hashes
     >>> # Generate a CSR
     >>> csr = x509.CertificateSigningRequestBuilder().subject_name(x509.Name([
     ...     # Provide various details about who we are.
@@ -74,7 +75,7 @@ a few details:
     ... # Sign the CSR with our private key.
     ... ])).sign(key, hashes.SHA256(), default_backend())
     >>> # Write our CSR out to disk.
-    >>> with open("path/to/csr.pem") as f:
+    >>> with open("path/to/csr.pem", "wb") as f:
     ...     f.write(csr.public_bytes(serialization.Encoding.PEM))
 
 Now we can give our CSR to a CA, who will give a certificate to us in return.

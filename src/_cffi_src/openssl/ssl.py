@@ -45,6 +45,7 @@ static const long Cryptography_HAS_SSL_OP_NO_TICKET;
 static const long Cryptography_HAS_NETBSD_D1_METH;
 static const long Cryptography_HAS_NEXTPROTONEG;
 static const long Cryptography_HAS_ALPN;
+static const long Cryptography_HAS_SET_CERT_CB;
 
 static const long SSL_FILETYPE_PEM;
 static const long SSL_FILETYPE_ASN1;
@@ -132,6 +133,10 @@ typedef ... SSL_CTX;
 typedef struct {
     int master_key_length;
     unsigned char master_key[...];
+    unsigned int session_id_length;
+    unsigned char session_id[...];
+    unsigned int sid_ctx_length;
+    unsigned char sid_ctx[...];
     ...;
 } SSL_SESSION;
 
@@ -200,6 +205,8 @@ Cryptography_STACK_OF_X509_NAME *SSL_get_client_CA_list(const SSL *);
 int SSL_get_error(const SSL *, int);
 int SSL_do_handshake(SSL *);
 int SSL_shutdown(SSL *);
+int SSL_renegotiate(SSL *);
+int SSL_renegotiate_pending(SSL *);
 const char *SSL_get_cipher_list(const SSL *, int);
 Cryptography_STACK_OF_SSL_CIPHER *SSL_get_ciphers(const SSL *);
 
@@ -247,6 +254,10 @@ size_t SSL_get_peer_finished(const SSL *, void *, size_t);
 """
 
 MACROS = """
+/* not a macro, but older OpenSSLs don't pass the args as const */
+char *SSL_CIPHER_description(const SSL_CIPHER *, char *, int);
+int SSL_SESSION_print(BIO *, const SSL_SESSION *);
+
 /* not macros, but will be conditionally bound so can't live in functions */
 const COMP_METHOD *SSL_get_current_compression(SSL *);
 const COMP_METHOD *SSL_get_current_expansion(SSL *);
@@ -398,6 +409,12 @@ void SSL_CTX_set_alpn_select_cb(SSL_CTX *,
 void SSL_get0_alpn_selected(const SSL *, const unsigned char **, unsigned *);
 
 long SSL_get_server_tmp_key(SSL *, EVP_PKEY **);
+
+/* SSL_CTX_set_cert_cb is introduced in OpenSSL 1.0.2. To continue to support
+ * earlier versions some special handling of these is necessary.
+ */
+void SSL_CTX_set_cert_cb(SSL_CTX *, int (*)(SSL *, void *), void *);
+void SSL_set_cert_cb(SSL *, int (*)(SSL *, void *), void *);
 """
 
 CUSTOMIZATIONS = """
@@ -600,6 +617,16 @@ static const long Cryptography_HAS_ALPN = 0;
 #else
 static const long Cryptography_HAS_ALPN = 1;
 #endif
+
+/* SSL_CTX_set_cert_cb was added in OpenSSL 1.0.2. */
+#if OPENSSL_VERSION_NUMBER < 0x10002001L || defined(LIBRESSL_VERSION_NUMBER)
+void (*SSL_CTX_set_cert_cb)(SSL_CTX *, int (*)(SSL *, void *), void *) = NULL;
+void (*SSL_set_cert_cb)(SSL *, int (*)(SSL *, void *), void *) = NULL;
+static const long Cryptography_HAS_SET_CERT_CB = 0;
+#else
+static const long Cryptography_HAS_SET_CERT_CB = 1;
+#endif
+
 
 #if defined(OPENSSL_NO_COMP) || defined(LIBRESSL_VERSION_NUMBER)
 static const long Cryptography_HAS_COMPRESSION = 0;

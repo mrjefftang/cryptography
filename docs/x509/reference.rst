@@ -5,6 +5,21 @@ X.509 Reference
 
 .. testsetup::
 
+    pem_crl_data = b"""
+    -----BEGIN X509 CRL-----
+    MIIBtDCBnQIBAjANBgkqhkiG9w0BAQsFADAnMQswCQYDVQQGEwJVUzEYMBYGA1UE
+    AwwPY3J5cHRvZ3JhcGh5LmlvGA8yMDE1MDEwMTAwMDAwMFoYDzIwMTYwMTAxMDAw
+    MDAwWjA+MDwCAQAYDzIwMTUwMTAxMDAwMDAwWjAmMBgGA1UdGAQRGA8yMDE1MDEw
+    MTAwMDAwMFowCgYDVR0VBAMKAQEwDQYJKoZIhvcNAQELBQADggEBABRA4ww50Lz5
+    zk1j2+aluC4HPHqb7o06h4pTDcCGeXUKXIGeP5ntGGmIoxa26sNoLeOr8+5b43Gf
+    yWraHertllOwaOpNFEe+YZFaE9femtoDbf+GLMvRx/0wDfd3KxPoXnXKMXb2d1w4
+    RCLgmkYx6JyvS+5ciuLQVIKC+l7jwIUeZFLJMUJ8msM4pFYoGameeZmtjMbd/TNg
+    cVBfmZxNMHuLladJxvSo2esARo0TYPhYsgrREKoHwhpzSxdynjn4bOVkILfguwsN
+    qtEEMZFEv5Kb0GqRp2+Iagv2S6dg9JGvxVdsoGjaB6EbYSZ3Psx4aODasIn11uwo
+    X4B9vUQNXqc=
+    -----END X509 CRL-----
+    """.strip()
+
     pem_req_data = b"""
     -----BEGIN CERTIFICATE REQUEST-----
     MIIC0zCCAbsCAQAwWTELMAkGA1UEBhMCVVMxETAPBgNVBAgMCElsbGlub2lzMRAw
@@ -129,6 +144,51 @@ Loading Certificates
     >>> cert.serial
     2
 
+Loading Certificate Revocation Lists
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. function:: load_pem_x509_crl(data, backend)
+
+    .. versionadded:: 1.1
+
+    Deserialize a certificate revocation list (CRL) from PEM encoded data. PEM
+    requests are base64 decoded and have delimiters that look like
+    ``-----BEGIN X509 CRL-----``.
+
+    :param bytes data: The PEM encoded request data.
+
+    :param backend: A backend supporting the
+        :class:`~cryptography.hazmat.backends.interfaces.X509Backend`
+        interface.
+
+    :returns: An instance of
+        :class:`~cryptography.x509.CertificateRevocationList`.
+
+.. function:: load_der_x509_crl(data, backend)
+
+    .. versionadded:: 1.1
+
+    Deserialize a certificate revocation list (CRL) from DER encoded data. DER
+    is a binary format.
+
+    :param bytes data: The DER encoded request data.
+
+    :param backend: A backend supporting the
+        :class:`~cryptography.hazmat.backends.interfaces.X509Backend`
+        interface.
+
+    :returns: An instance of
+        :class:`~cryptography.x509.CertificateRevocationList`.
+
+.. doctest::
+
+    >>> from cryptography import x509
+    >>> from cryptography.hazmat.backends import default_backend
+    >>> from cryptography.hazmat.primitives import hashes
+    >>> crl = x509.load_pem_x509_crl(pem_crl_data, default_backend())
+    >>> isinstance(crl.signature_hash_algorithm, hashes.SHA256)
+    True
+
 Loading Certificate Signing Requests
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -226,12 +286,12 @@ X.509 Certificate Object
 
     .. method:: public_key()
 
-        :type:
+        The public key associated with the certificate.
+
+        :returns:
             :class:`~cryptography.hazmat.primitives.asymmetric.rsa.RSAPublicKey` or
             :class:`~cryptography.hazmat.primitives.asymmetric.dsa.DSAPublicKey` or
             :class:`~cryptography.hazmat.primitives.asymmetric.ec.EllipticCurvePublicKey`
-
-        The public key associated with the certificate.
 
         .. doctest::
 
@@ -322,6 +382,26 @@ X.509 Certificate Object
             <Extension(oid=<ObjectIdentifier(oid=2.5.29.32, name=certificatePolicies)>, critical=False, value=<CertificatePolicies([<PolicyInformation(policy_identifier=<ObjectIdentifier(oid=2.16.840.1.101.3.2.1.48.1, name=Unknown OID)>, policy_qualifiers=None)>])>)>
             <Extension(oid=<ObjectIdentifier(oid=2.5.29.19, name=basicConstraints)>, critical=True, value=<BasicConstraints(ca=True, path_length=None)>)>
 
+    .. attribute:: signature
+
+        .. versionadded:: 1.2
+
+        :type: bytes
+
+        The bytes of the certificate's signature.
+
+    .. attribute:: tbs_certificate_bytes
+
+        .. versionadded:: 1.2
+
+        :type: bytes
+
+        The DER encoded bytes payload (as defined by :rfc:`5280`) that is hashed
+        and then signed by the private key of the certificate's issuer. This
+        data may be used to validate a signature, but use extreme caution as
+        certificate validation is a complex problem that involves much more
+        than just signature checks.
+
     .. method:: public_bytes(encoding)
 
         .. versionadded:: 1.0
@@ -340,6 +420,21 @@ X.509 CRL (Certificate Revocation List) Object
 
     .. versionadded:: 1.0
 
+    A CertificateRevocationList is an object representing a list of revoked
+    certificates. The object is iterable and will yield the RevokedCertificate
+    objects stored in this CRL.
+
+    .. doctest::
+
+            >>> len(crl)
+            1
+            >>> revoked_certificate = crl[0]
+            >>> type(revoked_certificate)
+            <class 'cryptography.hazmat.backends.openssl.x509._RevokedCertificate'>
+            >>> for r in crl:
+            ...     print(r.serial_number)
+            0
+
     .. method:: fingerprint(algorithm)
 
         :param algorithm: The
@@ -349,6 +444,12 @@ X.509 CRL (Certificate Revocation List) Object
         :return bytes: The fingerprint using the supplied hash algorithm, as
             bytes.
 
+        .. doctest::
+
+            >>> from cryptography.hazmat.primitives import hashes
+            >>> crl.fingerprint(hashes.SHA256())
+            'e\xcf.\xc4:\x83?1\xdc\xf3\xfc\x95\xd7\xb3\x87\xb3\x8e\xf8\xb93!\x87\x07\x9d\x1b\xb4!\xb9\xe4W\xf4\x1f'
+
     .. attribute:: signature_hash_algorithm
 
         :type: :class:`~cryptography.hazmat.primitives.hashes.HashAlgorithm`
@@ -357,11 +458,22 @@ X.509 CRL (Certificate Revocation List) Object
         :class:`~cryptography.hazmat.primitives.hashes.HashAlgorithm` which
         was used in signing this CRL.
 
+        .. doctest::
+
+            >>> from cryptography.hazmat.primitives import hashes
+            >>> isinstance(crl.signature_hash_algorithm, hashes.SHA256)
+            True
+
     .. attribute:: issuer
 
         :type: :class:`Name`
 
         The :class:`Name` of the issuer.
+
+        .. doctest::
+
+            >>> crl.issuer
+            <Name([<NameAttribute(oid=<ObjectIdentifier(oid=2.5.4.6, name=countryName)>, value=u'US')>, <NameAttribute(oid=<ObjectIdentifier(oid=2.5.4.3, name=commonName)>, value=u'cryptography.io')>])>
 
     .. attribute:: next_update
 
@@ -370,23 +482,59 @@ X.509 CRL (Certificate Revocation List) Object
         A naïve datetime representing when the next update to this CRL is
         expected.
 
+        .. doctest::
+
+            >>> crl.next_update
+            datetime.datetime(2016, 1, 1, 0, 0)
+
     .. attribute:: last_update
 
         :type: :class:`datetime.datetime`
 
         A naïve datetime representing when the this CRL was last updated.
 
-    .. attribute:: revoked_certificates
+        .. doctest::
 
-        :type: list of :class:`RevokedCertificate`
-
-        The revoked certificates listed in this CRL.
+            >>> crl.last_update
+            datetime.datetime(2015, 1, 1, 0, 0)
 
     .. attribute:: extensions
 
         :type: :class:`Extensions`
 
         The extensions encoded in the CRL.
+
+    .. attribute:: signature
+
+        .. versionadded:: 1.2
+
+        :type: bytes
+
+        The bytes of the CRL's signature.
+
+    .. attribute:: tbs_certlist_bytes
+
+        .. versionadded:: 1.2
+
+        :type: bytes
+
+        The DER encoded bytes payload (as defined by :rfc:`5280`) that is hashed
+        and then signed by the private key of the CRL's issuer. This data may be
+        used to validate a signature, but use extreme caution as CRL validation
+        is a complex problem that involves much more than just signature checks.
+
+    .. method:: public_bytes(encoding)
+
+        .. versionadded:: 1.2
+
+        :param encoding: The
+            :class:`~cryptography.hazmat.primitives.serialization.Encoding`
+            that will be used to serialize the certificate revocation list.
+
+        :return bytes: The data that can be written to a file or sent
+            over the network and used as part of a certificate verification
+            process.
+
 
 X.509 Certificate Builder
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -410,11 +558,7 @@ X.509 Certificate Builder
         ...     key_size=2048,
         ...     backend=default_backend()
         ... )
-        >>> public_key = rsa.generate_private_key(
-        ...     public_exponent=65537,
-        ...     key_size=2048,
-        ...     backend=default_backend()
-        ... ).public_key()
+        >>> public_key = private_key.public_key()
         >>> builder = x509.CertificateBuilder()
         >>> builder = builder.subject_name(x509.Name([
         ...     x509.NameAttribute(NameOID.COMMON_NAME, u'cryptography.io'),
@@ -496,9 +640,8 @@ X.509 Certificate Builder
 
         Adds an X.509 extension to the certificate.
 
-        :param extension: The extension to add to the certificate. Can be one
-            of :class:`~cryptography.x509.BasicConstraints` or
-            :class:`~cryptography.x509.SubjectAlternativeName`.
+        :param extension: An extension conforming to the
+            :class:`~cryptography.x509.ExtensionType` interface.
 
         :param critical: Set to ``True`` if the extension must be understood and
              handled by whoever reads the certificate.
@@ -522,6 +665,8 @@ X.509 Certificate Builder
             :class:`~cryptography.hazmat.backends.interfaces.X509Backend`
             interface.
 
+        :returns: :class:`~cryptography.x509.Certificate`
+
 
 X.509 CSR (Certificate Signing Request) Object
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -532,12 +677,12 @@ X.509 CSR (Certificate Signing Request) Object
 
     .. method:: public_key()
 
-        :type:
+        The public key associated with the request.
+
+        :returns:
             :class:`~cryptography.hazmat.primitives.asymmetric.rsa.RSAPublicKey` or
             :class:`~cryptography.hazmat.primitives.asymmetric.dsa.DSAPublicKey` or
             :class:`~cryptography.hazmat.primitives.asymmetric.ec.EllipticCurvePublicKey`
-
-        The public key associated with the request.
 
         .. doctest::
 
@@ -597,6 +742,132 @@ X.509 CSR (Certificate Signing Request) Object
             over the network to be signed by the certificate
             authority.
 
+    .. attribute:: signature
+
+        .. versionadded:: 1.2
+
+        :type: bytes
+
+        The bytes of the certificate signing request's signature.
+
+    .. attribute:: tbs_certrequest_bytes
+
+        .. versionadded:: 1.2
+
+        :type: bytes
+
+        The DER encoded bytes payload (as defined by :rfc:`2986`) that is
+        hashed and then signed by the private key (corresponding to the public
+        key embedded in the CSR). This data may be used to validate the CSR
+        signature.
+
+X.509 Certificate Revocation List Builder
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. class:: CertificateRevocationListBuilder
+
+    .. versionadded:: 1.2
+
+    .. doctest::
+
+        >>> from cryptography import x509
+        >>> from cryptography.hazmat.backends import default_backend
+        >>> from cryptography.hazmat.primitives import hashes
+        >>> from cryptography.hazmat.primitives.asymmetric import rsa
+        >>> from cryptography.x509.oid import NameOID
+        >>> import datetime
+        >>> one_day = datetime.timedelta(1, 0, 0)
+        >>> private_key = rsa.generate_private_key(
+        ...     public_exponent=65537,
+        ...     key_size=2048,
+        ...     backend=default_backend()
+        ... )
+        >>> builder = x509.CertificateRevocationListBuilder()
+        >>> builder = builder.issuer_name(x509.Name([
+        ...     x509.NameAttribute(NameOID.COMMON_NAME, u'cryptography.io CA'),
+        ... ]))
+        >>> builder = builder.last_update(datetime.datetime.today())
+        >>> builder = builder.next_update(datetime.datetime.today() + one_day)
+        >>> revoked_cert = x509.RevokedCertificateBuilder().serial_number(
+        ...     333
+        ... ).revocation_date(
+        ...     datetime.datetime.today()
+        ... ).build(default_backend())
+        >>> builder = builder.add_revoked_certificate(revoked_cert)
+        >>> crl = builder.sign(
+        ...     private_key=private_key, algorithm=hashes.SHA256(),
+        ...     backend=default_backend()
+        ... )
+        >>> len(crl)
+        1
+
+    .. method:: issuer_name(name)
+
+        Sets the issuer's distinguished name.
+
+        :param name: The :class:`~cryptography.x509.Name` that describes the
+            issuer (CA).
+
+    .. method:: last_update(time)
+
+        Sets this CRL's activation time.  This is the time from which
+        clients can start trusting this CRL.  It may be different from
+        the time at which this CRL was created. This is also known as the
+        ``thisUpdate`` time.
+
+        :param time: The :class:`datetime.datetime` object (in UTC) that marks
+            the activation time for this CRL.  The CRL may not be trusted if it
+            is used before this time.
+
+    .. method:: next_update(time)
+
+        Sets this CRL's next update time. This is the time by which
+        a new CRL will be issued. The CA is allowed to issue a new CRL before
+        this date, however clients are not required to check for it.
+
+        :param time: The :class:`datetime.datetime` object (in UTC) that marks
+            the next update time for this CRL.
+
+    .. method:: add_extension(extension, critical)
+
+        Adds an X.509 extension to this CRL.
+
+        :param extension: An extension with the
+            :class:`~cryptography.x509.ExtensionType` interface.
+
+        :param critical: Set to ``True`` if the extension must be understood and
+             handled by whoever reads the CRL.
+
+    .. method:: add_revoked_certificate(revoked_certificate)
+
+        Adds a revoked certificate to this CRL.
+
+        :param revoked_certificate: An instance of
+            :class:`~cryptography.x509.RevokedCertificate`. These can be
+            obtained from an existing CRL or created with
+            :class:`~cryptography.x509.RevokedCertificateBuilder`.
+
+    .. method:: sign(private_key, algorithm, backend)
+
+        Sign this CRL using the CA's private key.
+
+        :param private_key: The
+            :class:`~cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey`,
+            :class:`~cryptography.hazmat.primitives.asymmetric.dsa.DSAPrivateKey` or
+            :class:`~cryptography.hazmat.primitives.asymmetric.ec.EllipticCurvePrivateKey`
+            that will be used to sign the certificate.
+
+        :param algorithm: The
+            :class:`~cryptography.hazmat.primitives.hashes.HashAlgorithm` that
+            will be used to generate the signature.
+
+        :param backend: Backend that will be used to build the CRL.
+            Must support the
+            :class:`~cryptography.hazmat.backends.interfaces.X509Backend`
+            interface.
+
+        :returns: :class:`~cryptography.x509.CertificateRevocationList`
+
 X.509 Revoked Certificate Object
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -610,17 +881,92 @@ X.509 Revoked Certificate Object
 
         An integer representing the serial number of the revoked certificate.
 
+        .. doctest::
+
+            >>> revoked_certificate.serial_number
+            0
+
     .. attribute:: revocation_date
 
         :type: :class:`datetime.datetime`
 
         A naïve datetime representing the date this certificates was revoked.
 
+        .. doctest::
+
+            >>> revoked_certificate.revocation_date
+            datetime.datetime(2015, 1, 1, 0, 0)
+
     .. attribute:: extensions
 
         :type: :class:`Extensions`
 
         The extensions encoded in the revoked certificate.
+
+        .. doctest::
+
+            >>> for ext in revoked_certificate.extensions:
+            ...     print(ext)
+            <Extension(oid=<ObjectIdentifier(oid=2.5.29.24, name=invalidityDate)>, critical=False, value=<InvalidityDate(invalidity_date=2015-01-01 00:00:00)>)>
+            <Extension(oid=<ObjectIdentifier(oid=2.5.29.21, name=cRLReason)>, critical=False, value=<CRLReason(reason=ReasonFlags.key_compromise)>)>
+
+X.509 Revoked Certificate Builder
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. class:: RevokedCertificateBuilder
+
+    This class is used to create :class:`~cryptography.x509.RevokedCertificate`
+    objects that can be used with the
+    :class:`~cryptography.x509.CertificateRevocationListBuilder`.
+
+    .. versionadded:: 1.2
+
+    .. doctest::
+
+        >>> from cryptography import x509
+        >>> from cryptography.hazmat.backends import default_backend
+        >>> import datetime
+        >>> builder = x509.RevokedCertificateBuilder()
+        >>> builder = builder.revocation_date(datetime.datetime.today())
+        >>> builder = builder.serial_number(3333)
+        >>> revoked_certificate = builder.build(default_backend())
+        >>> isinstance(revoked_certificate, x509.RevokedCertificate)
+        True
+
+    .. method:: serial_number(serial_number)
+
+        Sets the revoked certificate's serial number.
+
+        :param serial_number: Integer number that is used to identify the
+            revoked certificate.
+
+    .. method:: revocation_date(time)
+
+        Sets the certificate's revocation date.
+
+        :param time: The :class:`datetime.datetime` object (in UTC) that marks the
+            revocation time for the certificate.
+
+    .. method:: add_extension(extension, critical)
+
+        Adds an X.509 extension to this revoked certificate.
+
+        :param extension: An instance of one of the
+            :ref:`CRL entry extensions <crl_entry_extensions>`.
+
+        :param critical: Set to ``True`` if the extension must be understood and
+             handled.
+
+    .. method:: build(backend)
+
+        Create a revoked certificate object using the provided backend.
+
+        :param backend: Backend that will be used to build the revoked
+            certificate.  Must support the
+            :class:`~cryptography.hazmat.backends.interfaces.X509Backend`
+            interface.
+
+        :returns: :class:`~cryptography.x509.RevokedCertificate`
 
 X.509 CSR (Certificate Signing Request) Builder Object
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -663,8 +1009,8 @@ X.509 CSR (Certificate Signing Request) Builder Object
 
     .. method:: add_extension(extension, critical)
 
-        :param extension: The :class:`~cryptography.x509.Extension` to add to
-            the request.
+        :param extension: An extension conforming to the
+            :class:`~cryptography.x509.ExtensionType` interface.
         :param critical: Set to `True` if the extension must be understood and
              handled by whoever reads the certificate.
         :returns: A new
@@ -782,7 +1128,7 @@ General Name Classes
     This is the generic interface that all the following classes are registered
     against.
 
-.. class:: RFC822Name
+.. class:: RFC822Name(value)
 
     .. versionadded:: 0.9
 
@@ -792,7 +1138,7 @@ General Name Classes
 
         :type: :term:`text`
 
-.. class:: DNSName
+.. class:: DNSName(value)
 
     .. versionadded:: 0.9
 
@@ -802,7 +1148,7 @@ General Name Classes
 
         :type: :term:`text`
 
-.. class:: DirectoryName
+.. class:: DirectoryName(value)
 
     .. versionadded:: 0.9
 
@@ -812,7 +1158,7 @@ General Name Classes
 
         :type: :class:`Name`
 
-.. class:: UniformResourceIdentifier
+.. class:: UniformResourceIdentifier(value)
 
     .. versionadded:: 0.9
 
@@ -828,7 +1174,7 @@ General Name Classes
 
         :type: :term:`text`
 
-.. class:: IPAddress
+.. class:: IPAddress(value)
 
     .. versionadded:: 0.9
 
@@ -840,7 +1186,7 @@ General Name Classes
             :class:`~ipaddress.IPv6Address`,  :class:`~ipaddress.IPv4Network`,
             or :class:`~ipaddress.IPv6Network`.
 
-.. class:: RegisteredID
+.. class:: RegisteredID(value)
 
     .. versionadded:: 0.9
 
@@ -850,7 +1196,7 @@ General Name Classes
 
         :type: :class:`ObjectIdentifier`
 
-.. class:: OtherName
+.. class:: OtherName(type_id, value)
 
     .. versionadded:: 1.0
 
@@ -936,7 +1282,7 @@ X.509 Extensions
     This is the interface against which all the following extension types are
     registered.
 
-.. class:: KeyUsage
+.. class:: KeyUsage(digital_signature, content_commitment, key_encipherment, data_encipherment, key_agreement, key_cert_sign, crl_sign, encipher_only, decipher_only)
 
     .. versionadded:: 0.9
 
@@ -1035,7 +1381,7 @@ X.509 Extensions
             is false.
 
 
-.. class:: BasicConstraints
+.. class:: BasicConstraints(ca, path_length)
 
     .. versionadded:: 0.9
 
@@ -1070,7 +1416,7 @@ X.509 Extensions
         means the certificate can sign a subordinate CA, but the subordinate CA
         is not allowed to create subordinates with ``ca`` set to true.
 
-.. class:: ExtendedKeyUsage
+.. class:: ExtendedKeyUsage(usages)
 
     .. versionadded:: 0.9
 
@@ -1079,6 +1425,9 @@ X.509 Extensions
     purposes indicated in the key usage extension. The object is
     iterable to obtain the list of
     :class:`~cryptography.x509.oid.ExtendedKeyUsageOID` OIDs present.
+
+    :param list usages: A list of
+        :class:`~cryptography.x509.oid.ExtendedKeyUsageOID` OIDs.
 
     .. attribute:: oid
 
@@ -1089,7 +1438,7 @@ X.509 Extensions
         Returns :attr:`~cryptography.x509.oid.ExtensionOID.EXTENDED_KEY_USAGE`.
 
 
-.. class:: OCSPNoCheck
+.. class:: OCSPNoCheck()
 
     .. versionadded:: 1.0
 
@@ -1110,7 +1459,7 @@ X.509 Extensions
 
         Returns :attr:`~cryptography.x509.oid.ExtensionOID.OCSP_NO_CHECK`.
 
-.. class:: NameConstraints
+.. class:: NameConstraints(permitted_subtrees, excluded_subtrees)
 
     .. versionadded:: 1.0
 
@@ -1144,7 +1493,7 @@ X.509 Extensions
         ``permitted_subtrees``. At least one of ``permitted_subtrees`` and
         ``excluded_subtrees`` will be non-None.
 
-.. class:: AuthorityKeyIdentifier
+.. class:: AuthorityKeyIdentifier(key_identifier, authority_cert_issuer, authority_cert_serial_number)
 
     .. versionadded:: 0.9
 
@@ -1213,7 +1562,7 @@ X.509 Extensions
             >>> x509.AuthorityKeyIdentifier.from_issuer_public_key(issuer_cert.public_key())
             <AuthorityKeyIdentifier(key_identifier='X\x01\x84$\x1b\xbc+R\x94J=\xa5\x10r\x14Q\xf5\xaf:\xc9', authority_cert_issuer=None, authority_cert_serial_number=None)>
 
-.. class:: SubjectKeyIdentifier
+.. class:: SubjectKeyIdentifier(digest)
 
     .. versionadded:: 0.9
 
@@ -1260,7 +1609,7 @@ X.509 Extensions
             >>> x509.SubjectKeyIdentifier.from_public_key(csr.public_key())
             <SubjectKeyIdentifier(digest='\xdb\xaa\xf0\x06\x11\xdbD\xfe\xbf\x93\x03\x8av\x88WP7\xa6\x91\xf7')>
 
-.. class:: SubjectAlternativeName
+.. class:: SubjectAlternativeName(general_names)
 
     .. versionadded:: 0.9
 
@@ -1268,6 +1617,8 @@ X.509 Extensions
     :ref:`general name <general_name_classes>` instances that provide a set
     of identities for which the certificate is valid. The object is iterable to
     get every element.
+
+    :param list general_names: A list of :class:`GeneralName` instances.
 
     .. attribute:: oid
 
@@ -1299,7 +1650,7 @@ X.509 Extensions
             [u'www.cryptography.io', u'cryptography.io']
 
 
-.. class:: IssuerAlternativeName
+.. class:: IssuerAlternativeName(general_names)
 
     .. versionadded:: 1.0
 
@@ -1307,6 +1658,8 @@ X.509 Extensions
     :ref:`general name <general_name_classes>` instances that provide a set
     of identities for the certificate issuer. The object is iterable to
     get every element.
+
+    :param list general_names: A list of :class:`GeneralName` instances.
 
     .. attribute:: oid
 
@@ -1325,7 +1678,7 @@ X.509 Extensions
         :returns: A list of values extracted from the matched general names.
 
 
-.. class:: AuthorityInformationAccess
+.. class:: AuthorityInformationAccess(descriptions)
 
     .. versionadded:: 0.9
 
@@ -1335,6 +1688,8 @@ X.509 Extensions
     validation services (such as OCSP) and issuer data. It is an iterable,
     containing one or more :class:`~cryptography.x509.AccessDescription`
     instances.
+
+    :param list descriptions: A list of :class:`AccessDescription` objects.
 
     .. attribute:: oid
 
@@ -1346,7 +1701,7 @@ X.509 Extensions
         :attr:`~cryptography.x509.oid.ExtensionOID.AUTHORITY_INFORMATION_ACCESS`.
 
 
-.. class:: AccessDescription
+.. class:: AccessDescription(access_method, access_location)
 
     .. versionadded:: 0.9
 
@@ -1372,13 +1727,16 @@ X.509 Extensions
 
         Where to access the information defined by the access method.
 
-.. class:: CRLDistributionPoints
+.. class:: CRLDistributionPoints(distribution_points)
 
     .. versionadded:: 0.9
 
     The CRL distribution points extension identifies how CRL information is
     obtained. It is an iterable, containing one or more
     :class:`DistributionPoint` instances.
+
+    :param list distribution_points: A list of :class:`DistributionPoint`
+        instances.
 
     .. attribute:: oid
 
@@ -1389,7 +1747,7 @@ X.509 Extensions
         Returns
         :attr:`~cryptography.x509.oid.ExtensionOID.CRL_DISTRIBUTION_POINTS`.
 
-.. class:: DistributionPoint
+.. class:: DistributionPoint(full_name, relative_name, reasons, crl_issuer)
 
     .. versionadded:: 0.9
 
@@ -1473,7 +1831,7 @@ X.509 Extensions
         removed from the CRL. This reason cannot be used as a reason flag
         in a :class:`DistributionPoint`.
 
-.. class:: InhibitAnyPolicy
+.. class:: InhibitAnyPolicy(skip_certs)
 
     .. versionadded:: 1.0
 
@@ -1502,12 +1860,55 @@ X.509 Extensions
 
         :type: int
 
-.. class:: CertificatePolicies
+.. class:: CRLNumber(crl_number)
+
+    .. versionadded:: 1.2
+
+    The CRL number is a CRL extension that conveys a monotonically increasing
+    sequence number for a given CRL scope and CRL issuer. This extension allows
+    users to easily determine when a particular CRL supersedes another CRL.
+    :rfc:`5280` requires that this extension be present in conforming CRLs.
+
+    .. attribute:: oid
+
+        :type: :class:`ObjectIdentifier`
+
+        Returns
+        :attr:`~cryptography.x509.oid.ExtensionOID.CRL_NUMBER`.
+
+    .. attribute:: crl_number
+
+        :type: int
+
+.. class:: UnrecognizedExtension
+
+    .. versionadded:: 1.2
+
+    A generic extension class used to hold the raw value of **non-critical**
+    extensions that ``cryptography`` does not know how to parse. Extensions
+    marked critical will raise
+    :class:`~cryptography.x509.UnsupportedExtension`.
+
+    .. attribute:: oid
+
+        :type: :class:`ObjectIdentifier`
+
+        Returns the OID associated with this extension.
+
+    .. attribute:: value
+
+        :type: byte
+
+        Returns the DER encoded bytes payload of the extension.
+
+.. class:: CertificatePolicies(policies)
 
     .. versionadded:: 0.9
 
     The certificate policies extension is an iterable, containing one or more
     :class:`PolicyInformation` instances.
+
+    :param list policies: A list of :class:`PolicyInformation` instances.
 
     .. attribute:: oid
 
@@ -1523,7 +1924,7 @@ Certificate Policies Classes
 
 These classes may be present within a :class:`CertificatePolicies` instance.
 
-.. class:: PolicyInformation
+.. class:: PolicyInformation(policy_identifier, policy_qualifiers)
 
     .. versionadded:: 0.9
 
@@ -1543,7 +1944,7 @@ These classes may be present within a :class:`CertificatePolicies` instance.
         meant for display to the relying party when the certificate is
         used.
 
-.. class:: UserNotice
+.. class:: UserNotice(notice_reference, explicit_text)
 
     .. versionadded:: 0.9
 
@@ -1565,7 +1966,7 @@ These classes may be present within a :class:`CertificatePolicies` instance.
 
         :type: :term:`text`
 
-.. class:: NoticeReference
+.. class:: NoticeReference(organization, notice_numbers)
 
     Notice reference can name an organization and provide information about
     notices related to the certificate. For example, it might identify the
@@ -1585,6 +1986,89 @@ These classes may be present within a :class:`CertificatePolicies` instance.
         :type: list
 
         A list of integers.
+
+.. _crl_entry_extensions:
+
+CRL Entry Extensions
+~~~~~~~~~~~~~~~~~~~~
+
+These extensions are only valid within a :class:`RevokedCertificate` object.
+
+.. class:: CertificateIssuer(general_names)
+
+    .. versionadded:: 1.2
+
+    The certificate issuer is an extension that is only valid inside
+    :class:`~cryptography.x509.RevokedCertificate` objects.  If the
+    ``indirectCRL`` property of the parent CRL's IssuingDistributionPoint
+    extension is set, then this extension identifies the certificate issuer
+    associated with the revoked certificate. The object is iterable to get
+    every element.
+
+    :param list general_names: A list of :class:`GeneralName` instances.
+
+    .. attribute:: oid
+
+        :type: :class:`ObjectIdentifier`
+
+        Returns
+        :attr:`~cryptography.x509.oid.CRLEntryExtensionOID.CERTIFICATE_ISSUER`.
+
+    .. method:: get_values_for_type(type)
+
+        :param type: A :class:`GeneralName` instance. This is one of the
+            :ref:`general name classes <general_name_classes>`.
+
+        :returns: A list of values extracted from the matched general names.
+            The type of the returned values depends on the :class:`GeneralName`.
+
+.. class:: CRLReason(reason)
+
+    .. versionadded:: 1.2
+
+    CRL reason (also known as ``reasonCode``) is an extension that is only
+    valid inside :class:`~cryptography.x509.RevokedCertificate` objects. It
+    identifies a reason for the certificate revocation.
+
+    :param reason: A value from the
+        :class:`~cryptography.x509.oid.CRLEntryExtensionOID` enum.
+
+    .. attribute:: oid
+
+        :type: :class:`ObjectIdentifier`
+
+        Returns
+        :attr:`~cryptography.x509.oid.CRLEntryExtensionOID.CRL_REASON`.
+
+    .. attribute:: reason
+
+        :type: An element from :class:`~cryptography.x509.ReasonFlags`
+
+.. class:: InvalidityDate(invalidity_date)
+
+    .. versionadded:: 1.2
+
+    Invalidity date is an extension that is only valid inside
+    :class:`~cryptography.x509.RevokedCertificate` objects. It provides
+    the date on which it is known or suspected that the private key was
+    compromised or that the certificate otherwise became invalid.
+    This date may be earlier than the revocation date in the CRL entry,
+    which is the date at which the CA processed the revocation.
+
+    :param invalidity_date: The :class:`datetime.datetime` when it is known
+        or suspected that the private key was compromised.
+
+    .. attribute:: oid
+
+        :type: :class:`ObjectIdentifier`
+
+        Returns
+        :attr:`~cryptography.x509.oid.CRLEntryExtensionOID.INVALIDITY_DATE`.
+
+    .. attribute:: invalidity_date
+
+        :type: :class:`datetime.datetime`
+
 
 Object Identifiers
 ~~~~~~~~~~~~~~~~~~
@@ -1667,6 +2151,22 @@ instances. The following common OIDs are available as constants.
     .. attribute:: EMAIL_ADDRESS
 
         Corresponds to the dotted string ``"1.2.840.113549.1.9.1"``.
+
+    .. attribute:: JURISDICTION_COUNTRY_NAME
+
+        Corresponds to the dotted string ``"1.3.6.1.4.1.311.60.2.1.3"``.
+
+    .. attribute:: JURISDICTION_LOCALITY_NAME
+
+        Corresponds to the dotted string ``"1.3.6.1.4.1.311.60.2.1.1"``.
+
+    .. attribute:: JURISDICTION_STATE_OR_PROVINCE_NAME
+
+        Corresponds to the dotted string ``"1.3.6.1.4.1.311.60.2.1.2"``.
+
+    .. attribute:: BUSINESS_CATEGORY
+
+        Corresponds to the dotted string ``"2.5.4.15"``.
 
 
 .. class:: SignatureAlgorithmOID
@@ -1886,6 +2386,28 @@ instances. The following common OIDs are available as constants.
         identifier for the :class:`~cryptography.x509.OCSPNoCheck` extension
         type.
 
+    .. attribute:: CRL_NUMBER
+
+        Corresponds to the dotted string ``"2.5.29.20"``. The identifier for
+        the ``CRLNumber`` extension type. This extension only has meaning
+        for certificate revocation lists.
+
+.. class:: CRLEntryExtensionOID
+
+    .. versionadded:: 1.2
+
+    .. attribute:: CERTIFICATE_ISSUER
+
+        Corresponds to the dotted string ``"2.5.29.29"``.
+
+    .. attribute:: CRL_REASON
+
+        Corresponds to the dotted string ``"2.5.29.21"``.
+
+    .. attribute:: INVALIDITY_DATE
+
+        Corresponds to the dotted string ``"2.5.29.24"``.
+
 Exceptions
 ~~~~~~~~~~
 .. currentmodule:: cryptography.x509
@@ -1913,7 +2435,8 @@ Exceptions
 
 .. class:: UnsupportedExtension
 
-    This is raised when a certificate contains an unsupported extension type.
+    This is raised when a certificate contains an unsupported extension type
+    that is marked ``critical``.
 
     .. attribute:: oid
 

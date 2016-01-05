@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # This file is dual licensed under the terms of the Apache License, Version
 # 2.0, and the BSD License. See the LICENSE file in the root of this repository
 # for complete details.
@@ -35,7 +37,7 @@ requirements = [
     "idna>=2.0",
     "pyasn1>=0.1.8",
     "six>=1.4.1",
-    "setuptools",
+    "setuptools>=1.0",
 ]
 setup_requirements = []
 
@@ -60,6 +62,8 @@ test_requirements = [
     "pytest",
     "pretend",
     "iso8601",
+    "hypothesis",
+    "pyasn1_modules",
 ]
 
 # If there's no vectors locally that probably means we are in a tarball and
@@ -290,6 +294,7 @@ setup(
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 3.3",
         "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: Implementation :: CPython",
         "Programming Language :: Python :: Implementation :: PyPy",
         "Topic :: Security :: Cryptography",

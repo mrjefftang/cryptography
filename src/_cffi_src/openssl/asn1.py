@@ -9,24 +9,7 @@ INCLUDES = """
 """
 
 TYPES = """
-/*
- * TODO: This typedef is wrong.
- *
- * This is due to limitations of cffi.
- * See https://bitbucket.org/cffi/cffi/issue/69
- *
- * For another possible work-around (not used here because it involves more
- * complicated use of the cffi API which falls outside the general pattern used
- * by this package), see
- * http://paste.pound-python.org/show/iJcTUMkKeBeS6yXpZWUU/
- *
- * The work-around used here is to just be sure to declare a type that is at
- * least as large as the real type.  Maciej explains:
- *
- * <fijal> I think you want to declare your value too large (e.g. long)
- * <fijal> that way you'll never pass garbage
- */
-typedef intptr_t time_t;
+typedef int... time_t;
 
 typedef int ASN1_BOOLEAN;
 typedef ... ASN1_INTEGER;
@@ -40,7 +23,7 @@ struct asn1_string_st {
 
 typedef struct asn1_string_st ASN1_OCTET_STRING;
 typedef struct asn1_string_st ASN1_IA5STRING;
-typedef ... ASN1_BIT_STRING;
+typedef struct asn1_string_st ASN1_BIT_STRING;
 typedef ... ASN1_OBJECT;
 typedef struct asn1_string_st ASN1_STRING;
 typedef struct asn1_string_st ASN1_UTF8STRING;
@@ -112,13 +95,16 @@ ASN1_UTCTIME *ASN1_UTCTIME_set(ASN1_UTCTIME *, time_t);
 
 /*  ASN1 GENERALIZEDTIME */
 int ASN1_GENERALIZEDTIME_set_string(ASN1_GENERALIZEDTIME *, const char *);
+ASN1_GENERALIZEDTIME *ASN1_GENERALIZEDTIME_set(ASN1_GENERALIZEDTIME *, time_t);
 void ASN1_GENERALIZEDTIME_free(ASN1_GENERALIZEDTIME *);
+int i2d_ASN1_GENERALIZEDTIME(ASN1_GENERALIZEDTIME *, unsigned char **);
 
 /*  ASN1 ENUMERATED */
 ASN1_ENUMERATED *ASN1_ENUMERATED_new(void);
 void ASN1_ENUMERATED_free(ASN1_ENUMERATED *);
 int ASN1_ENUMERATED_set(ASN1_ENUMERATED *, long);
 long ASN1_ENUMERATED_get(ASN1_ENUMERATED *);
+int i2d_ASN1_ENUMERATED(ASN1_ENUMERATED *, unsigned char **);
 
 ASN1_VALUE *ASN1_item_d2i(ASN1_VALUE **, const unsigned char **, long,
                           const ASN1_ITEM *);

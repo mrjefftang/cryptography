@@ -12,8 +12,10 @@ import sys
 import warnings
 
 
-DeprecatedIn09 = DeprecationWarning
-DeprecatedIn10 = PendingDeprecationWarning
+# the functions deprecated in 1.0 are on an arbitrarily extended deprecation
+# cycle and should not be removed until we agree on when that cycle ends.
+DeprecatedIn10 = DeprecationWarning
+DeprecatedIn12 = PendingDeprecationWarning
 
 
 def read_only_property(name):
@@ -48,14 +50,23 @@ else:
         return result
 
 
-def int_to_bytes(integer):
+def int_to_bytes(integer, length=None):
     hex_string = '%x' % integer
-    n = len(hex_string)
+    if length is None:
+        n = len(hex_string)
+    else:
+        n = length * 2
     return binascii.unhexlify(hex_string.zfill(n + (n & 1)))
 
 
 class InterfaceNotImplemented(Exception):
     pass
+
+
+if hasattr(inspect, "signature"):
+    signature = inspect.signature
+else:
+    signature = inspect.getargspec
 
 
 def verify_interface(iface, klass):
@@ -67,13 +78,13 @@ def verify_interface(iface, klass):
         if isinstance(getattr(iface, method), abc.abstractproperty):
             # Can't properly verify these yet.
             continue
-        spec = inspect.getargspec(getattr(iface, method))
-        actual = inspect.getargspec(getattr(klass, method))
-        if spec != actual:
+        sig = signature(getattr(iface, method))
+        actual = signature(getattr(klass, method))
+        if sig != actual:
             raise InterfaceNotImplemented(
                 "{0}.{1}'s signature differs from the expected. Expected: "
                 "{2!r}. Received: {3!r}".format(
-                    klass, method, spec, actual
+                    klass, method, sig, actual
                 )
             )
 

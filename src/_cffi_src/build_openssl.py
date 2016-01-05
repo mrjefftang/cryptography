@@ -7,7 +7,9 @@ from __future__ import absolute_import, division, print_function
 import os
 import sys
 
-from _cffi_src.utils import build_ffi_for_binding, extra_link_args
+from _cffi_src.utils import (
+    build_ffi_for_binding, compiler_type, extra_link_args
+)
 
 
 def _get_openssl_libraries(platform):
@@ -79,7 +81,6 @@ ffi = build_ffi_for_binding(
         "objects",
         "opensslv",
         "pem",
-        "pkcs7",
         "pkcs12",
         "rand",
         "rsa",
@@ -87,10 +88,11 @@ ffi = build_ffi_for_binding(
         "x509",
         "x509name",
         "x509v3",
-        "x509_vfy"
+        "x509_vfy",
+        "pkcs7",
     ],
     pre_include=_OSX_PRE_INCLUDE,
     post_include=_OSX_POST_INCLUDE,
     libraries=_get_openssl_libraries(sys.platform),
-    extra_link_args=extra_link_args(sys.platform),
+    extra_link_args=extra_link_args(compiler_type()),
 )

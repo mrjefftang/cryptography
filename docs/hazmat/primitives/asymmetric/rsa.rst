@@ -163,9 +163,15 @@ Verification
 ~~~~~~~~~~~~
 
 The previous section describes what to do if you have a private key and want to
-sign something. If you have a public key, a message, and a signature, you can
-check that the public key genuinely was used to sign that specific message. You
-also need to know which signing algorithm was used:
+sign something. If you have a public key, a message, a signature, and the
+signing algorithm that was used you can check that the private key associated
+with a given public key was used to sign that specific message.  You can obtain
+a public key to use in verification using
+:func:`~cryptography.hazmat.primitives.serialization.load_pem_public_key`,
+:func:`~cryptography.hazmat.primitives.serialization.load_der_public_key`,
+:meth:`~cryptography.hazmat.primitives.asymmetric.rsa.RSAPublicNumbers.public_key`
+, or
+:meth:`~cryptography.hazmat.primitives.asymmetric.rsa.RSAPrivateKey.public_key`.
 
 .. doctest::
 
@@ -421,7 +427,7 @@ Handling partial RSA private keys
 If you are trying to load RSA private keys yourself you may find that not all
 parameters required by ``RSAPrivateNumbers`` are available. In particular the
 `Chinese Remainder Theorem`_ (CRT) values ``dmp1``, ``dmq1``, ``iqmp`` may be
-missing or present in a different form. For example `OpenPGP`_ does not include
+missing or present in a different form. For example, `OpenPGP`_ does not include
 the ``iqmp``, ``dmp1`` or ``dmq1`` parameters.
 
 The following functions are provided for users who want to work with keys like
@@ -652,4 +658,4 @@ Key interfaces
 .. _`Chinese Remainder Theorem`: https://en.wikipedia.org/wiki/RSA_%28cryptosystem%29#Using_the_Chinese_remainder_algorithm
 .. _`security proof`: http://eprint.iacr.org/2001/062.pdf
 .. _`recommended padding algorithm`: http://www.daemonology.net/blog/2009-06-11-cryptographic-right-answers.html
-.. _`proven secure`: http://cseweb.ucsd.edu/~mihir/papers/oae.pdf
+.. _`proven secure`: https://cseweb.ucsd.edu/~mihir/papers/oae.pdf

@@ -6,6 +6,7 @@ Backends
 Blowfish
 boolean
 Botan
+Capitan
 Changelog
 ciphertext
 committer
@@ -27,7 +28,9 @@ Django
 Encodings
 fernet
 Fernet
+FIPS
 hazmat
+hostname
 indistinguishability
 initialisms
 interoperable
@@ -47,11 +50,13 @@ online
 paddings
 pickleable
 plaintext
+pre
 preprocessor
 preprocessors
 pseudorandom
 pyOpenSSL
 relicensed
+runtime
 Schneier
 scrypt
 Serializers

@@ -5,6 +5,7 @@
 from __future__ import absolute_import, division, print_function
 
 import binascii
+import datetime
 import ipaddress
 import os
 
@@ -18,7 +19,8 @@ from cryptography.hazmat.backends.interfaces import (
 )
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import (
-    AuthorityInformationAccessOID, ExtendedKeyUsageOID, ExtensionOID, NameOID
+    AuthorityInformationAccessOID, ExtendedKeyUsageOID, ExtensionOID,
+    NameOID, ObjectIdentifier
 )
 
 from .hazmat.primitives.test_ec import _skip_curve_unsupported
@@ -71,6 +73,173 @@ class TestExtension(object):
         assert ext1 != ext3
         assert ext1 != ext4
         assert ext1 != object()
+
+
+class TestUnrecognizedExtension(object):
+    def test_invalid_oid(self):
+        with pytest.raises(TypeError):
+            x509.UnrecognizedExtension("notanoid", b"somedata")
+
+    def test_eq(self):
+        ext1 = x509.UnrecognizedExtension(
+            x509.ObjectIdentifier("1.2.3.4"), b"\x03\x02\x01"
+        )
+        ext2 = x509.UnrecognizedExtension(
+            x509.ObjectIdentifier("1.2.3.4"), b"\x03\x02\x01"
+        )
+        assert ext1 == ext2
+
+    def test_ne(self):
+        ext1 = x509.UnrecognizedExtension(
+            x509.ObjectIdentifier("1.2.3.4"), b"\x03\x02\x01"
+        )
+        ext2 = x509.UnrecognizedExtension(
+            x509.ObjectIdentifier("1.2.3.4"), b"\x03\x02\x02"
+        )
+        ext3 = x509.UnrecognizedExtension(
+            x509.ObjectIdentifier("1.2.3.5"), b"\x03\x02\x01"
+        )
+        assert ext1 != ext2
+        assert ext1 != ext3
+        assert ext1 != object()
+
+    def test_repr(self):
+        ext1 = x509.UnrecognizedExtension(
+            x509.ObjectIdentifier("1.2.3.4"), b"\x03\x02\x01"
+        )
+        if six.PY3:
+            assert repr(ext1) == (
+                "<UnrecognizedExtension(oid=<ObjectIdentifier(oid=1.2.3.4, "
+                "name=Unknown OID)>, value=b'\\x03\\x02\\x01')>"
+            )
+        else:
+            assert repr(ext1) == (
+                "<UnrecognizedExtension(oid=<ObjectIdentifier(oid=1.2.3.4, "
+                "name=Unknown OID)>, value='\\x03\\x02\\x01')>"
+            )
+
+    def test_hash(self):
+        ext1 = x509.UnrecognizedExtension(
+            x509.ObjectIdentifier("1.2.3.4"), b"\x03\x02\x01"
+        )
+        ext2 = x509.UnrecognizedExtension(
+            x509.ObjectIdentifier("1.2.3.4"), b"\x03\x02\x01"
+        )
+        ext3 = x509.UnrecognizedExtension(
+            x509.ObjectIdentifier("1.2.3.5"), b"\x03\x02\x01"
+        )
+        assert hash(ext1) == hash(ext2)
+        assert hash(ext1) != hash(ext3)
+
+
+class TestCertificateIssuer(object):
+    def test_iter_names(self):
+        ci = x509.CertificateIssuer([
+            x509.DNSName(u"cryptography.io"),
+            x509.DNSName(u"crypto.local"),
+        ])
+        assert len(ci) == 2
+        assert list(ci) == [
+            x509.DNSName(u"cryptography.io"),
+            x509.DNSName(u"crypto.local"),
+        ]
+
+    def test_indexing(self):
+        ci = x509.CertificateIssuer([
+            x509.DNSName(u"cryptography.io"),
+            x509.DNSName(u"crypto.local"),
+            x509.DNSName(u"another.local"),
+            x509.RFC822Name(u"email@another.local"),
+            x509.UniformResourceIdentifier(u"http://another.local"),
+        ])
+        assert ci[-1] == ci[4]
+        assert ci[2:6:2] == [ci[2], ci[4]]
+
+    def test_eq(self):
+        ci1 = x509.CertificateIssuer([x509.DNSName(u"cryptography.io")])
+        ci2 = x509.CertificateIssuer([x509.DNSName(u"cryptography.io")])
+        assert ci1 == ci2
+
+    def test_ne(self):
+        ci1 = x509.CertificateIssuer([x509.DNSName(u"cryptography.io")])
+        ci2 = x509.CertificateIssuer([x509.DNSName(u"somethingelse.tld")])
+        assert ci1 != ci2
+        assert ci1 != object()
+
+    def test_repr(self):
+        ci = x509.CertificateIssuer([x509.DNSName(u"cryptography.io")])
+        assert repr(ci) == (
+            "<CertificateIssuer(<GeneralNames([<DNSName(value=cryptography.io"
+            ")>])>)>"
+        )
+
+    def test_get_values_for_type(self):
+        ci = x509.CertificateIssuer(
+            [x509.DNSName(u"cryptography.io")]
+        )
+        names = ci.get_values_for_type(x509.DNSName)
+        assert names == [u"cryptography.io"]
+
+
+class TestCRLReason(object):
+    def test_invalid_reason_flags(self):
+        with pytest.raises(TypeError):
+            x509.CRLReason("notareason")
+
+    def test_eq(self):
+        reason1 = x509.CRLReason(x509.ReasonFlags.unspecified)
+        reason2 = x509.CRLReason(x509.ReasonFlags.unspecified)
+        assert reason1 == reason2
+
+    def test_ne(self):
+        reason1 = x509.CRLReason(x509.ReasonFlags.unspecified)
+        reason2 = x509.CRLReason(x509.ReasonFlags.ca_compromise)
+        assert reason1 != reason2
+        assert reason1 != object()
+
+    def test_hash(self):
+        reason1 = x509.CRLReason(x509.ReasonFlags.unspecified)
+        reason2 = x509.CRLReason(x509.ReasonFlags.unspecified)
+        reason3 = x509.CRLReason(x509.ReasonFlags.ca_compromise)
+
+        assert hash(reason1) == hash(reason2)
+        assert hash(reason1) != hash(reason3)
+
+    def test_repr(self):
+        reason1 = x509.CRLReason(x509.ReasonFlags.unspecified)
+        assert repr(reason1) == (
+            "<CRLReason(reason=ReasonFlags.unspecified)>"
+        )
+
+
+class TestInvalidityDate(object):
+    def test_invalid_invalidity_date(self):
+        with pytest.raises(TypeError):
+            x509.InvalidityDate("notadate")
+
+    def test_eq(self):
+        invalid1 = x509.InvalidityDate(datetime.datetime(2015, 1, 1, 1, 1))
+        invalid2 = x509.InvalidityDate(datetime.datetime(2015, 1, 1, 1, 1))
+        assert invalid1 == invalid2
+
+    def test_ne(self):
+        invalid1 = x509.InvalidityDate(datetime.datetime(2015, 1, 1, 1, 1))
+        invalid2 = x509.InvalidityDate(datetime.datetime(2015, 1, 1, 1, 2))
+        assert invalid1 != invalid2
+        assert invalid1 != object()
+
+    def test_repr(self):
+        invalid1 = x509.InvalidityDate(datetime.datetime(2015, 1, 1, 1, 1))
+        assert repr(invalid1) == (
+            "<InvalidityDate(invalidity_date=2015-01-01 01:01:00)>"
+        )
+
+    def test_hash(self):
+        invalid1 = x509.InvalidityDate(datetime.datetime(2015, 1, 1, 1, 1))
+        invalid2 = x509.InvalidityDate(datetime.datetime(2015, 1, 1, 1, 1))
+        invalid3 = x509.InvalidityDate(datetime.datetime(2015, 1, 1, 1, 2))
+        assert hash(invalid1) == hash(invalid2)
+        assert hash(invalid1) != hash(invalid3)
 
 
 class TestNoticeReference(object):
@@ -267,6 +436,16 @@ class TestCertificatePolicies(object):
         cp2 = x509.CertificatePolicies([pi2])
         assert cp != cp2
         assert cp != object()
+
+    def test_indexing(self):
+        pi = x509.PolicyInformation(x509.ObjectIdentifier("1.2.3"), [u"test"])
+        pi2 = x509.PolicyInformation(x509.ObjectIdentifier("1.2.4"), [u"test"])
+        pi3 = x509.PolicyInformation(x509.ObjectIdentifier("1.2.5"), [u"test"])
+        pi4 = x509.PolicyInformation(x509.ObjectIdentifier("1.2.6"), [u"test"])
+        pi5 = x509.PolicyInformation(x509.ObjectIdentifier("1.2.7"), [u"test"])
+        cp = x509.CertificatePolicies([pi, pi2, pi3, pi4, pi5])
+        assert cp[-1] == cp[4]
+        assert cp[2:6:2] == [cp[2], cp[4]]
 
 
 @pytest.mark.requires_backend_interface(interface=RSABackend)
@@ -594,6 +773,20 @@ class TestSubjectKeyIdentifier(object):
         assert ski != ski2
         assert ski != object()
 
+    def test_hash(self):
+        ski1 = x509.SubjectKeyIdentifier(
+            binascii.unhexlify(b"092384932230498bc980aa8098456f6ff7ff3ac9")
+        )
+        ski2 = x509.SubjectKeyIdentifier(
+            binascii.unhexlify(b"092384932230498bc980aa8098456f6ff7ff3ac9")
+        )
+        ski3 = x509.SubjectKeyIdentifier(
+            binascii.unhexlify(b"aa8098456f6ff7ff3ac9092384932230498bc980")
+        )
+
+        assert hash(ski1) == hash(ski2)
+        assert hash(ski1) != hash(ski3)
+
 
 class TestAuthorityKeyIdentifier(object):
     def test_authority_cert_issuer_not_generalname(self):
@@ -603,8 +796,14 @@ class TestAuthorityKeyIdentifier(object):
     def test_authority_cert_serial_number_not_integer(self):
         dirname = x509.DirectoryName(
             x509.Name([
-                x509.NameAttribute(x509.ObjectIdentifier('oid'), u'value1'),
-                x509.NameAttribute(x509.ObjectIdentifier('oid2'), u'value2'),
+                x509.NameAttribute(
+                    x509.ObjectIdentifier('2.999.1'),
+                    u'value1'
+                ),
+                x509.NameAttribute(
+                    x509.ObjectIdentifier('2.999.2'),
+                    u'value2'
+                ),
             ])
         )
         with pytest.raises(TypeError):
@@ -617,8 +816,14 @@ class TestAuthorityKeyIdentifier(object):
     def test_authority_issuer_not_none_serial_none(self):
         dirname = x509.DirectoryName(
             x509.Name([
-                x509.NameAttribute(x509.ObjectIdentifier('oid'), u'value1'),
-                x509.NameAttribute(x509.ObjectIdentifier('oid2'), u'value2'),
+                x509.NameAttribute(
+                    x509.ObjectIdentifier('2.999.1'),
+                    u'value1'
+                ),
+                x509.NameAttribute(
+                    x509.ObjectIdentifier('2.999.2'),
+                    u'value2'
+                ),
             ])
         )
         with pytest.raises(ValueError):
@@ -706,6 +911,13 @@ class TestBasicConstraints(object):
         assert repr(na) == (
             "<BasicConstraints(ca=True, path_length=None)>"
         )
+
+    def test_hash(self):
+        na = x509.BasicConstraints(ca=True, path_length=None)
+        na2 = x509.BasicConstraints(ca=True, path_length=None)
+        na3 = x509.BasicConstraints(ca=True, path_length=0)
+        assert hash(na) == hash(na2)
+        assert hash(na) != hash(na3)
 
     def test_eq(self):
         na = x509.BasicConstraints(ca=True, path_length=None)
@@ -820,17 +1032,33 @@ class TestExtensions(object):
 
         assert exc.value.oid == x509.ObjectIdentifier("1.2.3.4")
 
+    @pytest.mark.requires_backend_interface(interface=EllipticCurveBackend)
     def test_unsupported_extension(self, backend):
-        # TODO: this will raise an exception when all extensions are complete
         cert = _load_cert(
             os.path.join(
-                "x509", "custom", "unsupported_extension.pem"
+                "x509", "custom", "unsupported_extension_2.pem"
             ),
             x509.load_pem_x509_certificate,
             backend
         )
         extensions = cert.extensions
-        assert len(extensions) == 0
+        assert len(extensions) == 2
+        assert extensions[0].critical is False
+        assert extensions[0].oid == x509.ObjectIdentifier(
+            "1.3.6.1.4.1.41482.2"
+        )
+        assert extensions[0].value == x509.UnrecognizedExtension(
+            x509.ObjectIdentifier("1.3.6.1.4.1.41482.2"),
+            b"1.3.6.1.4.1.41482.1.2"
+        )
+        assert extensions[1].critical is False
+        assert extensions[1].oid == x509.ObjectIdentifier(
+            "1.3.6.1.4.1.45724.2.1.1"
+        )
+        assert extensions[1].value == x509.UnrecognizedExtension(
+            x509.ObjectIdentifier("1.3.6.1.4.1.45724.2.1.1"),
+            b"\x03\x02\x040"
+        )
 
     def test_no_extensions_get_for_class(self, backend):
         cert = _load_cert(
@@ -845,6 +1073,21 @@ class TestExtensions(object):
             exts.get_extension_for_class(x509.IssuerAlternativeName)
         assert exc.value.oid == ExtensionOID.ISSUER_ALTERNATIVE_NAME
 
+    def test_unrecognized_extension_for_class(self):
+        exts = x509.Extensions([])
+        with pytest.raises(TypeError):
+            exts.get_extension_for_class(x509.UnrecognizedExtension)
+
+    def test_indexing(self, backend):
+        cert = _load_cert(
+            os.path.join("x509", "cryptography.io.pem"),
+            x509.load_pem_x509_certificate,
+            backend
+        )
+        exts = cert.extensions
+        assert exts[-1] == exts[7]
+        assert exts[2:6:2] == [exts[2], exts[4]]
+
     def test_one_extension_get_for_class(self, backend):
         cert = _load_cert(
             os.path.join(
@@ -856,6 +1099,20 @@ class TestExtensions(object):
         ext = cert.extensions.get_extension_for_class(x509.BasicConstraints)
         assert ext is not None
         assert isinstance(ext.value, x509.BasicConstraints)
+
+    def test_repr(self, backend):
+        cert = _load_cert(
+            os.path.join(
+                "x509", "custom", "basic_constraints_not_critical.pem"
+            ),
+            x509.load_pem_x509_certificate,
+            backend
+        )
+        assert repr(cert.extensions) == (
+            "<Extensions([<Extension(oid=<ObjectIdentifier(oid=2.5.29.19, name"
+            "=basicConstraints)>, critical=False, value=<BasicConstraints(ca=F"
+            "alse, path_length=None)>)>])>"
+        )
 
 
 @pytest.mark.requires_backend_interface(interface=RSABackend)
@@ -1152,10 +1409,10 @@ class TestDirectoryName(object):
 
     def test_eq(self):
         name = x509.Name([
-            x509.NameAttribute(x509.ObjectIdentifier('oid'), u'value1')
+            x509.NameAttribute(x509.ObjectIdentifier('2.999.1'), u'value1')
         ])
         name2 = x509.Name([
-            x509.NameAttribute(x509.ObjectIdentifier('oid'), u'value1')
+            x509.NameAttribute(x509.ObjectIdentifier('2.999.1'), u'value1')
         ])
         gn = x509.DirectoryName(x509.Name([name]))
         gn2 = x509.DirectoryName(x509.Name([name2]))
@@ -1163,10 +1420,10 @@ class TestDirectoryName(object):
 
     def test_ne(self):
         name = x509.Name([
-            x509.NameAttribute(x509.ObjectIdentifier('oid'), u'value1')
+            x509.NameAttribute(x509.ObjectIdentifier('2.999.1'), u'value1')
         ])
         name2 = x509.Name([
-            x509.NameAttribute(x509.ObjectIdentifier('oid'), u'value2')
+            x509.NameAttribute(x509.ObjectIdentifier('2.999.2'), u'value2')
         ])
         gn = x509.DirectoryName(x509.Name([name]))
         gn2 = x509.DirectoryName(x509.Name([name2]))
@@ -1190,6 +1447,14 @@ class TestRFC822Name(object):
         gn = x509.RFC822Name(u"email@em\xe5\xefl.com")
         assert gn.value == u"email@em\xe5\xefl.com"
         assert gn._encoded == b"email@xn--eml-vla4c.com"
+
+    def test_hash(self):
+        g1 = x509.RFC822Name(u"email@host.com")
+        g2 = x509.RFC822Name(u"email@host.com")
+        g3 = x509.RFC822Name(u"admin@host.com")
+
+        assert hash(g1) == hash(g2)
+        assert hash(g1) != hash(g3)
 
 
 class TestUniformResourceIdentifier(object):
@@ -1222,6 +1487,14 @@ class TestUniformResourceIdentifier(object):
             u"ldap://cryptography:90/path?query=true#somedata"
         )
         assert gn.value == u"ldap://cryptography:90/path?query=true#somedata"
+
+    def test_hash(self):
+        g1 = x509.UniformResourceIdentifier(u"http://host.com")
+        g2 = x509.UniformResourceIdentifier(u"http://host.com")
+        g3 = x509.UniformResourceIdentifier(u"http://other.com")
+
+        assert hash(g1) == hash(g2)
+        assert hash(g1) != hash(g3)
 
 
 class TestRegisteredID(object):
@@ -1352,6 +1625,17 @@ class TestGeneralNames(object):
             x509.DNSName(u"crypto.local"),
         ]
 
+    def test_indexing(self):
+        gn = x509.GeneralNames([
+            x509.DNSName(u"cryptography.io"),
+            x509.DNSName(u"crypto.local"),
+            x509.DNSName(u"another.local"),
+            x509.RFC822Name(u"email@another.local"),
+            x509.UniformResourceIdentifier(u"http://another.local"),
+        ])
+        assert gn[-1] == gn[4]
+        assert gn[2:6:2] == [gn[2], gn[4]]
+
     def test_invalid_general_names(self):
         with pytest.raises(TypeError):
             x509.GeneralNames(
@@ -1407,6 +1691,17 @@ class TestIssuerAlternativeName(object):
             x509.DNSName(u"crypto.local"),
         ]
 
+    def test_indexing(self):
+        ian = x509.IssuerAlternativeName([
+            x509.DNSName(u"cryptography.io"),
+            x509.DNSName(u"crypto.local"),
+            x509.DNSName(u"another.local"),
+            x509.RFC822Name(u"email@another.local"),
+            x509.UniformResourceIdentifier(u"http://another.local"),
+        ])
+        assert ian[-1] == ian[4]
+        assert ian[2:6:2] == [ian[2], ian[4]]
+
     def test_invalid_general_names(self):
         with pytest.raises(TypeError):
             x509.IssuerAlternativeName(
@@ -1461,6 +1756,32 @@ class TestRSAIssuerAlternativeNameExtension(object):
         ]
 
 
+class TestCRLNumber(object):
+    def test_eq(self):
+        crl_number = x509.CRLNumber(15)
+        assert crl_number == x509.CRLNumber(15)
+
+    def test_ne(self):
+        crl_number = x509.CRLNumber(15)
+        assert crl_number != x509.CRLNumber(14)
+        assert crl_number != object()
+
+    def test_repr(self):
+        crl_number = x509.CRLNumber(15)
+        assert repr(crl_number) == "<CRLNumber(15)>"
+
+    def test_invalid_number(self):
+        with pytest.raises(TypeError):
+            x509.CRLNumber("notanumber")
+
+    def test_hash(self):
+        c1 = x509.CRLNumber(1)
+        c2 = x509.CRLNumber(1)
+        c3 = x509.CRLNumber(2)
+        assert hash(c1) == hash(c2)
+        assert hash(c1) != hash(c3)
+
+
 class TestSubjectAlternativeName(object):
     def test_get_values_for_type(self):
         san = x509.SubjectAlternativeName(
@@ -1479,6 +1800,17 @@ class TestSubjectAlternativeName(object):
             x509.DNSName(u"cryptography.io"),
             x509.DNSName(u"crypto.local"),
         ]
+
+    def test_indexing(self):
+        san = x509.SubjectAlternativeName([
+            x509.DNSName(u"cryptography.io"),
+            x509.DNSName(u"crypto.local"),
+            x509.DNSName(u"another.local"),
+            x509.RFC822Name(u"email@another.local"),
+            x509.UniformResourceIdentifier(u"http://another.local"),
+        ])
+        assert san[-1] == san[4]
+        assert san[2:6:2] == [san[2], san[4]]
 
     def test_invalid_general_names(self):
         with pytest.raises(TypeError):
@@ -1554,6 +1886,21 @@ class TestRSASubjectAlternativeNameExtension(object):
             u'*.saseliminator.com',
             u'saseliminator.com'
         ]
+
+    def test_san_empty_hostname(self, backend):
+        cert = _load_cert(
+            os.path.join(
+                "x509", "custom", "san_empty_hostname.pem"
+            ),
+            x509.load_pem_x509_certificate,
+            backend
+        )
+        san = cert.extensions.get_extension_for_oid(
+            ExtensionOID.SUBJECT_ALTERNATIVE_NAME
+        )
+
+        dns = san.value.get_values_for_type(x509.DNSName)
+        assert dns == [u'']
 
     def test_san_wildcard_idna_dns_name(self, backend):
         cert = _load_cert(
@@ -1819,7 +2166,7 @@ class TestExtendedKeyUsageExtension(object):
 
 class TestAccessDescription(object):
     def test_invalid_access_method(self):
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             x509.AccessDescription("notanoid", x509.DNSName(u"test"))
 
     def test_invalid_access_location(self):
@@ -1827,6 +2174,13 @@ class TestAccessDescription(object):
             x509.AccessDescription(
                 AuthorityInformationAccessOID.CA_ISSUERS, "invalid"
             )
+
+    def test_valid_nonstandard_method(self):
+        ad = x509.AccessDescription(
+            ObjectIdentifier("2.999.1"),
+            x509.UniformResourceIdentifier(u"http://example.com")
+        )
+        assert ad is not None
 
     def test_repr(self):
         ad = x509.AccessDescription(
@@ -1959,6 +2313,32 @@ class TestAuthorityInformationAccess(object):
 
         assert aia != aia2
         assert aia != object()
+
+    def test_indexing(self):
+        aia = x509.AuthorityInformationAccess([
+            x509.AccessDescription(
+                AuthorityInformationAccessOID.OCSP,
+                x509.UniformResourceIdentifier(u"http://ocsp.domain.com")
+            ),
+            x509.AccessDescription(
+                AuthorityInformationAccessOID.CA_ISSUERS,
+                x509.UniformResourceIdentifier(u"http://domain.com/ca.crt")
+            ),
+            x509.AccessDescription(
+                AuthorityInformationAccessOID.OCSP,
+                x509.UniformResourceIdentifier(u"http://ocsp2.domain.com")
+            ),
+            x509.AccessDescription(
+                AuthorityInformationAccessOID.OCSP,
+                x509.UniformResourceIdentifier(u"http://ocsp3.domain.com")
+            ),
+            x509.AccessDescription(
+                AuthorityInformationAccessOID.OCSP,
+                x509.UniformResourceIdentifier(u"http://ocsp4.domain.com")
+            ),
+        ])
+        assert aia[-1] == aia[4]
+        assert aia[2:6:2] == [aia[2], aia[4]]
 
 
 @pytest.mark.requires_backend_interface(interface=RSABackend)
@@ -2688,6 +3068,32 @@ class TestCRLDistributionPoints(object):
         assert cdp != cdp4
         assert cdp != object()
 
+    def test_indexing(self):
+        ci = x509.CRLDistributionPoints([
+            x509.DistributionPoint(
+                None, None, None,
+                [x509.UniformResourceIdentifier(u"uri://thing")],
+            ),
+            x509.DistributionPoint(
+                None, None, None,
+                [x509.UniformResourceIdentifier(u"uri://thing2")],
+            ),
+            x509.DistributionPoint(
+                None, None, None,
+                [x509.UniformResourceIdentifier(u"uri://thing3")],
+            ),
+            x509.DistributionPoint(
+                None, None, None,
+                [x509.UniformResourceIdentifier(u"uri://thing4")],
+            ),
+            x509.DistributionPoint(
+                None, None, None,
+                [x509.UniformResourceIdentifier(u"uri://thing5")],
+            ),
+        ])
+        assert ci[-1] == ci[4]
+        assert ci[2:6:2] == [ci[2], ci[4]]
+
 
 @pytest.mark.requires_backend_interface(interface=RSABackend)
 @pytest.mark.requires_backend_interface(interface=X509Backend)
@@ -2900,6 +3306,30 @@ class TestCRLDistributionPointsExtension(object):
                         ),
                     ])
                 )],
+            )
+        ])
+
+    def test_crl_empty_hostname(self, backend):
+        cert = _load_cert(
+            os.path.join(
+                "x509", "custom", "cdp_empty_hostname.pem"
+            ),
+            x509.load_pem_x509_certificate,
+            backend
+        )
+
+        cdps = cert.extensions.get_extension_for_oid(
+            ExtensionOID.CRL_DISTRIBUTION_POINTS
+        ).value
+
+        assert cdps == x509.CRLDistributionPoints([
+            x509.DistributionPoint(
+                full_name=[x509.UniformResourceIdentifier(
+                    u"ldap:/CN=A,OU=B,dc=C,DC=D?E?F?G?H=I"
+                )],
+                relative_name=None,
+                reasons=None,
+                crl_issuer=None
             )
         ])
 

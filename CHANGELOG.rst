@@ -1,10 +1,109 @@
 Changelog
 =========
 
-1.1 - `master`_
+1.2 - `master`_
 ~~~~~~~~~~~~~~~
 
 .. note:: This version is not yet released and is under active development.
+
+* **BACKWARDS INCOMPATIBLE:**
+  :class:`~cryptography.x509.RevokedCertificate`
+  :attr:`~cryptography.x509.RevokedCertificate.extensions` now uses extension
+  classes rather than returning raw values inside the
+  :class:`~cryptography.x509.Extension`
+  :attr:`~cryptography.x509.Extension.value`. The new classes
+  are:
+
+  * :class:`~cryptography.x509.CertificateIssuer`
+  * :class:`~cryptography.x509.CRLReason`
+  * :class:`~cryptography.x509.InvalidityDate`
+* Deprecated support for OpenSSL 0.9.8 and 1.0.0. At this time there is no time
+  table for actually dropping support, however we strongly encourage all users
+  to upgrade, as those versions no longer receives support from the OpenSSL
+  project.
+* The :class:`~cryptography.x509.Certificate` class now has
+  :attr:`~cryptography.x509.Certificate.signature` and
+  :attr:`~cryptography.x509.Certificate.tbs_certificate_bytes` attributes.
+* The :class:`~cryptography.x509.CertificateSigningRequest` class now has
+  :attr:`~cryptography.x509.CertificateSigningRequest.signature` and
+  :attr:`~cryptography.x509.CertificateSigningRequest.tbs_certrequest_bytes`
+  attributes.
+* The :class:`~cryptography.x509.CertificateRevocationList` class now has
+  :attr:`~cryptography.x509.CertificateRevocationList.signature` and
+  :attr:`~cryptography.x509.CertificateRevocationList.tbs_certlist_bytes`
+  attributes.
+* :class:`~cryptography.x509.NameConstraints` are now supported in the
+  :class:`~cryptography.x509.CertificateBuilder` and
+  :class:`~cryptography.x509.CertificateSigningRequestBuilder`.
+* Support serialization of certificate revocation lists using the
+  :meth:`~cryptography.x509.CertificateRevocationList.public_bytes` method of
+  :class:`~cryptography.x509.CertificateRevocationList`.
+* Add support for parsing :class:`~cryptography.x509.CertificateRevocationList`
+  :meth:`~cryptography.x509.CertificateRevocationList.extensions` in the
+  OpenSSL backend. The following extensions are currently supported:
+
+  * :class:`~cryptography.x509.AuthorityInformationAccess`
+  * :class:`~cryptography.x509.AuthorityKeyIdentifier`
+  * :class:`~cryptography.x509.CRLNumber`
+  * :class:`~cryptography.x509.IssuerAlternativeName`
+* Added :class:`~cryptography.x509.CertificateRevocationListBuilder` and
+  :class:`~cryptography.x509.RevokedCertificateBuilder` to allow creation of
+  CRLs.
+* Unrecognized non-critical X.509 extensions are now parsed into an
+  :class:`~cryptography.x509.UnrecognizedExtension` object.
+
+1.1.2 - 2015-12-10
+~~~~~~~~~~~~~~~~~~
+
+* Fixed a SIGBUS crash with the OS X wheels caused by redefinition of a
+  method.
+* Fixed a runtime error ``undefined symbol EC_GFp_nistp224_method`` that
+  occurred with some OpenSSL installations.
+* Updated Windows and OS X wheels to be compiled against OpenSSL 1.0.2e.
+
+1.1.1 - 2015-11-19
+~~~~~~~~~~~~~~~~~~
+
+* Fixed several small bugs related to compiling the OpenSSL bindings with
+  unusual OpenSSL configurations.
+* Resolved an issue where, depending on the method of installation and
+  which Python interpreter they were using, users on El Capitan (OS X 10.11)
+  may have seen an ``InternalError`` on import.
+
+1.1 - 2015-10-28
+~~~~~~~~~~~~~~~~
+
+* Added support for Elliptic Curve Diffie-Hellman with
+  :class:`~cryptography.hazmat.primitives.asymmetric.ec.ECDH`.
+* Added :class:`~cryptography.hazmat.primitives.kdf.x963kdf.X963KDF`.
+* Added support for parsing certificate revocation lists (CRLs) using
+  :func:`~cryptography.x509.load_pem_x509_crl` and
+  :func:`~cryptography.x509.load_der_x509_crl`.
+* Add support for AES key wrapping with
+  :func:`~cryptography.hazmat.primitives.keywrap.aes_key_wrap` and
+  :func:`~cryptography.hazmat.primitives.keywrap.aes_key_unwrap`.
+* Added a ``__hash__`` method to :class:`~cryptography.x509.Name`.
+* Add support for encoding and decoding elliptic curve points to a byte string
+  form using
+  :meth:`~cryptography.hazmat.primitives.asymmetric.ec.EllipticCurvePublicNumbers.encode_point`
+  and
+  :meth:`~cryptography.hazmat.primitives.asymmetric.ec.EllipticCurvePublicNumbers.from_encoded_point`.
+* Added :meth:`~cryptography.x509.Extensions.get_extension_for_class`.
+* :class:`~cryptography.x509.CertificatePolicies` are now supported in the
+  :class:`~cryptography.x509.CertificateBuilder`.
+* ``countryName`` is now encoded as a ``PrintableString`` when creating subject
+  and issuer distinguished names with the Certificate and CSR builder classes.
+
+1.0.2 - 2015-09-27
+~~~~~~~~~~~~~~~~~~
+* **SECURITY ISSUE**: The OpenSSL backend prior to 1.0.2 made extensive use
+  of assertions to check response codes where our tests could not trigger a
+  failure.  However, when Python is run with ``-O`` these asserts are optimized
+  away.  If a user ran Python with this flag and got an invalid response code
+  this could result in undefined behavior or worse. Accordingly, all response
+  checks from the OpenSSL backend have been converted from ``assert``
+  to a true function call. Credit **Emilia Käsper (Google Security Team)**
+  for the report.
 
 1.0.1 - 2015-09-05
 ~~~~~~~~~~~~~~~~~~

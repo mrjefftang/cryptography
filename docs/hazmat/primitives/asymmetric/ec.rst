@@ -12,7 +12,7 @@ Elliptic curve cryptography
 
     Generate a new private key on ``curve`` for use with ``backend``.
 
-    :param backend: A :class:`EllipticCurve` provider.
+    :param curve: A :class:`EllipticCurve` provider.
 
     :param backend: A
         :class:`~cryptography.hazmat.backends.interfaces.EllipticCurveBackend`
@@ -122,6 +122,68 @@ Elliptic Curve Signature Algorithms
         :returns: A new instance of a :class:`EllipticCurvePublicKey`
             provider.
 
+    .. method:: encode_point()
+
+        .. versionadded:: 1.1
+
+        Encodes an elliptic curve point to a byte string as described in
+        `SEC 1 v2.0`_ section 2.3.3. This method only supports uncompressed
+        points.
+
+        :return bytes: The encoded point.
+
+    .. classmethod:: from_encoded_point(curve, data)
+
+        .. versionadded:: 1.1
+
+        Decodes a byte string as described in `SEC 1 v2.0`_ section 2.3.3 and
+        returns an :class:`EllipticCurvePublicNumbers`. This method only
+        supports uncompressed points.
+
+        :param curve: An
+            :class:`~cryptography.hazmat.primitives.asymmetric.ec.EllipticCurve`
+            instance.
+
+        :param bytes data: The serialized point byte string.
+
+        :returns: An :class:`EllipticCurvePublicNumbers` instance.
+
+        :raises ValueError: Raised on invalid point type or data length.
+
+        :raises TypeError: Raised when curve is not an
+            :class:`~cryptography.hazmat.primitives.asymmetric.ec.EllipticCurve`.
+
+Elliptic Curve Key Exchange algorithm
+-------------------------------------
+
+.. class:: ECDH()
+
+    .. versionadded:: 1.1
+
+    The Elliptic Curve Diffie-Hellman Key Exchange algorithm first standardized
+    in NIST publication `800-56A`_, and later in `800-56Ar2`_.
+
+    For most applications the ``shared_key`` should be passed to a key
+    derivation function.
+
+    .. doctest::
+
+        >>> from cryptography.hazmat.backends import default_backend
+        >>> from cryptography.hazmat.primitives.asymmetric import ec
+        >>> private_key = ec.generate_private_key(
+        ...     ec.SECP384R1(), default_backend()
+        ... )
+        >>> peer_public_key = ec.generate_private_key(
+        ...     ec.SECP384R1(), default_backend()
+        ... ).public_key()
+        >>> shared_key = private_key.exchange(ec.ECDH(), peer_public_key)
+
+    ECDHE (or EECDH), the ephemeral form of this exchange, is **strongly
+    preferred** over simple ECDH and provides `forward secrecy`_ when used.
+    You must generate a new private key using :func:`generate_private_key` for
+    each :meth:`~EllipticCurvePrivateKey.exchange` when performing an ECDHE key
+    exchange.
+
 Elliptic Curves
 ---------------
 
@@ -138,7 +200,7 @@ Generally the NIST prime field ("P") curves are significantly faster than the
 other types suggested by NIST at both signing and verifying with ECDSA.
 
 Prime fields also `minimize the number of security concerns for elliptic-curve
-cryptography`_. However there is `some concern`_ that both the prime field and
+cryptography`_. However, there is `some concern`_ that both the prime field and
 binary field ("B") NIST curves may have been weakened during their generation.
 
 Currently `cryptography` only supports NIST curves, none of which are
@@ -314,6 +376,24 @@ Key Interfaces
         :returns:
             :class:`~cryptography.hazmat.primitives.asymmetric.AsymmetricSignatureContext`
 
+    .. method:: exchange(algorithm, peer_public_key)
+
+        .. versionadded:: 1.1
+
+        Perform's a key exchange operation using the provided algorithm with
+        the peer's public key.
+
+        For most applications the result should be passed to a key derivation
+        function.
+
+        :param algorithm: The key exchange algorithm, currently only
+            :class:`~cryptography.hazmat.primitives.asymmetric.ec.ECDH` is
+            supported.
+        :param EllipticCurvePublicKey peer_public_key: The public key for the
+            peer.
+
+        :returns bytes: A shared key.
+
     .. method:: public_key()
 
         :return: :class:`EllipticCurvePublicKey`
@@ -419,10 +499,14 @@ Key Interfaces
 
 .. _`FIPS 186-3`: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
 .. _`FIPS 186-4`: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
+.. _`800-56A`: http://csrc.nist.gov/publications/nistpubs/800-56A/SP800-56A_Revision1_Mar08-2007.pdf
+.. _`800-56Ar2`: http://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-56Ar2.pdf
 .. _`some concern`: https://crypto.stackexchange.com/questions/10263/should-we-trust-the-nist-recommended-ecc-parameters
 .. _`less than 224 bits`: http://www.ecrypt.eu.org/ecrypt2/documents/D.SPA.20.pdf
 .. _`elliptic curve diffie-hellman is faster than diffie-hellman`: http://digitalcommons.unl.edu/cgi/viewcontent.cgi?article=1100&context=cseconfwork
-.. _`minimize the number of security concerns for elliptic-curve cryptography`: http://cr.yp.to/ecdh/curve25519-20060209.pdf
+.. _`minimize the number of security concerns for elliptic-curve cryptography`: https://cr.yp.to/ecdh/curve25519-20060209.pdf
 .. _`SafeCurves`: http://safecurves.cr.yp.to/
 .. _`ECDSA`: https://en.wikipedia.org/wiki/ECDSA
 .. _`EdDSA`: https://en.wikipedia.org/wiki/EdDSA
+.. _`forward secrecy`: https://en.wikipedia.org/wiki/Forward_secrecy
+.. _`SEC 1 v2.0`: http://www.secg.org/sec1-v2.pdf

@@ -271,6 +271,12 @@ class MultiBackend(object):
             _Reasons.UNSUPPORTED_ELLIPTIC_CURVE
         )
 
+    def elliptic_curve_exchange_algorithm_supported(self, algorithm, curve):
+        return any(
+            b.elliptic_curve_exchange_algorithm_supported(algorithm, curve)
+            for b in self._filtered_backends(EllipticCurveBackend)
+        )
+
     def load_pem_private_key(self, data, password):
         for b in self._filtered_backends(PEMSerializationBackend):
             return b.load_pem_private_key(data, password)
@@ -325,6 +331,24 @@ class MultiBackend(object):
             _Reasons.UNSUPPORTED_X509
         )
 
+    def load_pem_x509_crl(self, data):
+        for b in self._filtered_backends(X509Backend):
+            return b.load_pem_x509_crl(data)
+
+        raise UnsupportedAlgorithm(
+            "This backend does not support X.509.",
+            _Reasons.UNSUPPORTED_X509
+        )
+
+    def load_der_x509_crl(self, data):
+        for b in self._filtered_backends(X509Backend):
+            return b.load_der_x509_crl(data)
+
+        raise UnsupportedAlgorithm(
+            "This backend does not support X.509.",
+            _Reasons.UNSUPPORTED_X509
+        )
+
     def load_der_x509_csr(self, data):
         for b in self._filtered_backends(X509Backend):
             return b.load_der_x509_csr(data)
@@ -355,6 +379,24 @@ class MultiBackend(object):
     def create_x509_certificate(self, builder, private_key, algorithm):
         for b in self._filtered_backends(X509Backend):
             return b.create_x509_certificate(builder, private_key, algorithm)
+
+        raise UnsupportedAlgorithm(
+            "This backend does not support X.509.",
+            _Reasons.UNSUPPORTED_X509
+        )
+
+    def create_x509_crl(self, builder, private_key, algorithm):
+        for b in self._filtered_backends(X509Backend):
+            return b.create_x509_crl(builder, private_key, algorithm)
+
+        raise UnsupportedAlgorithm(
+            "This backend does not support X.509.",
+            _Reasons.UNSUPPORTED_X509
+        )
+
+    def create_x509_revoked_certificate(self, builder):
+        for b in self._filtered_backends(X509Backend):
+            return b.create_x509_revoked_certificate(builder)
 
         raise UnsupportedAlgorithm(
             "This backend does not support X.509.",
